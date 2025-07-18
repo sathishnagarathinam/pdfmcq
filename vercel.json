@@ -11,10 +11,5 @@
       "src": "/(.*)",
       "dest": "flask_app.py"
     }
-  ],
-  "env": {
-    "OPENROUTER_API_KEY": "@openrouter_api_key",
-    "OPENAI_API_KEY": "@openai_api_key",
-    "DEEPSEEK_API_KEY": "@deepseek_api_key"
-  }
+  ]
 }
