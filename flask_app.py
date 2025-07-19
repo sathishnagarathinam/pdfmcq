@@ -227,8 +227,8 @@ def download_pdf():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# For Vercel deployment - this must be at module level
+application = app
+
 if __name__ == '__main__':
     app.run(debug=True, port=5002)
-
-# For Vercel deployment
-app = app

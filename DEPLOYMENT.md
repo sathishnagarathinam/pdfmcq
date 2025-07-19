@@ -44,11 +44,13 @@ git push -u origin main
 
 In Vercel dashboard → Project Settings → Environment Variables, add:
 
-| Name | Value | Description |
-|------|-------|-------------|
-| `OPENROUTER_API_KEY` | `sk-or-v1-xxxxx` | Your OpenRouter API key (required) |
-| `OPENAI_API_KEY` | `sk-xxxxx` | Your OpenAI API key (optional) |
-| `DEEPSEEK_API_KEY` | `sk-xxxxx` | Your DeepSeek API key (optional) |
+| Name | Value | Environment | Required |
+|------|-------|-------------|----------|
+| `OPENROUTER_API_KEY` | `sk-or-v1-xxxxx` | Production, Preview, Development | ✅ Yes |
+| `OPENAI_API_KEY` | `sk-xxxxx` | Production, Preview, Development | ❌ Optional |
+| `DEEPSEEK_API_KEY` | `sk-xxxxx` | Production, Preview, Development | ❌ Optional |
+
+**Important**: Make sure to select all three environments (Production, Preview, Development) for each variable.
 
 #### 4. Deploy
 
