@@ -1,0 +1,31 @@
+{
+  "models": {
+    "question_generation": {
+      "name": "valhalla/t5-small-qg-hl",
+      "type": "t5",
+      "size": "small",
+      "description": "T5-based question generation model"
+    },
+    "sentence_transformer": {
+      "name": "all-MiniLM-L6-v2",
+      "type": "sentence_transformer",
+      "size": "small",
+      "description": "Sentence embedding model for semantic analysis"
+    },
+    "spacy": {
+      "name": "en_core_web_sm",
+      "type": "spacy",
+      "size": "small",
+      "description": "spaCy English language model"
+    }
+  },
+  "cache_dir": "./models",
+  "max_cache_size_gb": 5,
+  "auto_download": true,
+  "offline_only": false,
+  "estimation_settings": {
+    "use_advanced_analysis": true,
+    "confidence_threshold": 0.7,
+    "max_questions_limit": 100
+  }
+}

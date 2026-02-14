@@ -1,0 +1,5 @@
+Requirement already satisfied: nltk in /Users/sathishkumarnagarathinam/.pyenv/versions/3.10.12/lib/python3.10/site-packages (3.9.1)
+Requirement already satisfied: joblib in /Users/sathishkumarnagarathinam/.pyenv/versions/3.10.12/lib/python3.10/site-packages (from nltk) (1.5.1)
+Requirement already satisfied: tqdm in /Users/sathishkumarnagarathinam/.pyenv/versions/3.10.12/lib/python3.10/site-packages (from nltk) (4.67.1)
+Requirement already satisfied: click in /Users/sathishkumarnagarathinam/.pyenv/versions/3.10.12/lib/python3.10/site-packages (from nltk) (8.2.1)
+Requirement already satisfied: regex>=2021.8.3 in /Users/sathishkumarnagarathinam/.pyenv/versions/3.10.12/lib/python3.10/site-packages (from nltk) (2024.11.6)

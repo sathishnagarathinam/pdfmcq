@@ -75,3 +75,22 @@ node_modules/
 test_*.py
 demo_*.py
 debug_*.py
+
+# Large model directories (too large for GitHub)
+models/
+enhanced_models/
+fast_models/
+
+# Additional test and setup files
+create_*.py
+fix_*.py
+setup_*.py
+run_*.py
+quick_*.py
+final_*.py
+offline_*.py
+ocr_*.py
+
+# PDF test files
+test_*.pdf
+*.pdf

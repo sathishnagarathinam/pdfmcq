@@ -96,26 +96,144 @@
             border: 1px solid #ccc;
             border-radius: 3px;
         }
+
+        /* Summary Box Styling */
+        .summary-box {
+            background-color: #f0f8ff;
+            border: 2px solid #4CAF50;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+
+        .summary-section {
+            margin: 15px 0;
+            padding: 10px;
+            background-color: white;
+            border-radius: 5px;
+        }
+
+        .summary-section h3 {
+            color: #2e7d32;
+            margin-top: 0;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 5px;
+        }
+
+        .page-distribution, .section-distribution {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            margin: 10px 0;
+        }
+
+        .distribution-item {
+            background-color: #e8f5e9;
+            padding: 8px;
+            border-radius: 4px;
+            text-align: center;
+            border: 1px solid #c8e6c9;
+        }
+
+        .distribution-item strong {
+            color: #1b5e20;
+        }
+
+        .question {
+            background-color: #fafafa;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid #4CAF50;
+        }
+
+        .question-metadata {
+            background-color: #fff3e0;
+            padding: 8px;
+            margin: 8px 0;
+            border-radius: 4px;
+            font-size: 0.9em;
+            border-left: 3px solid #ff9800;
+        }
+
+        .metadata-badge {
+            display: inline-block;
+            background-color: #ff9800;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 3px;
+            margin: 2px;
+            font-size: 0.85em;
+        }
     </style>
 </head>
 <body>
     <h1>PDF MCQ Generator-sathish</h1>
-    <p>Upload a PDF document to generate multiple-choice questions:</p>
-    
+
+    <!-- Mode Selector -->
+    <div style="background-color: #f0f0f0; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+        <label style="font-weight: bold; margin-right: 20px;">
+            <input type="radio" name="mode" value="generate" checked onchange="switchMode('generate')">
+            🤖 Generate New MCQs from PDF Content
+        </label>
+        <label style="font-weight: bold;">
+            <input type="radio" name="mode" value="parse" onchange="switchMode('parse')">
+            📋 Parse Existing MCQ PDF
+        </label>
+    </div>
+
     <div class="upload-container">
         <form id="uploadForm" enctype="multipart/form-data">
+            <label for="pdfFile" style="font-weight: bold;">📄 Upload Base PDF Document:</label>
             <input type="file" id="pdfFile" name="pdfFile" accept=".pdf" required>
             <br><br>
-            <label for="questionCount">Number of Questions:</label>
-            <input type="number" id="questionCount" name="questionCount" min="1" max="100" value="5">
-            <br><br>
-            <label for="difficulty">Difficulty Level:</label>
-            <select id="difficulty" name="difficulty">
-                <option value="easy">Easy</option>
-                <option value="medium" selected>Medium</option>
-                <option value="hard">Hard</option>
-            </select>
-            <br><br>
+
+            <!-- Amendment PDF Upload -->
+            <div style="background-color: #fff3cd; padding: 15px; border-radius: 5px; margin: 15px 0;">
+                <label style="font-weight: bold;">
+                    <input type="checkbox" id="useAmendment" name="useAmendment" onchange="toggleAmendmentUpload()">
+                    📝 Generate questions from PDF with amendments
+                </label>
+                <p style="font-size: 0.9em; color: #666; margin: 10px 0;">
+                    Enable this to upload an amendment PDF and generate questions covering changes, differences, and new provisions.
+                </p>
+
+                <div id="amendmentUploadSection" style="display: none; margin-top: 10px;">
+                    <label for="amendmentPdfFile" style="font-weight: bold;">📋 Upload Amendment PDF:</label>
+                    <input type="file" id="amendmentPdfFile" name="amendmentPdfFile" accept=".pdf">
+                    <p style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                        ℹ️ Questions will analyze both documents and focus on amendments, changes, and differences.
+                    </p>
+                    <div id="amendmentFileInfo" style="margin-top: 10px; padding: 10px; background-color: #e7f3ff; border-radius: 3px; display: none;">
+                        <strong>✅ Amendment PDF loaded:</strong> <span id="amendmentFileName"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Generate Mode Section -->
+            <div id="generateModeSection">
+                <label for="questionCount">Number of Questions:</label>
+                <input type="number" id="questionCount" name="questionCount" min="1" max="100" value="5">
+                <br>
+                <input type="checkbox" id="useMaxQuestions" name="useMaxQuestions">
+                <label for="useMaxQuestions">🚀 Generate Maximum Questions (ignores number above)</label>
+                <br><br>
+                <label for="difficulty">Difficulty Level:</label>
+                <select id="difficulty" name="difficulty">
+                    <option value="easy">Easy</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="hard">Hard</option>
+                </select>
+                <br><br>
+            </div>
+
+            <!-- Parse Mode Section -->
+            <div id="parseModeSection" style="display: none;">
+                <label for="answerPage">Answer Key Page Number (default: last page):</label>
+                <input type="number" id="answerPage" name="answerPage" min="-1" value="-1">
+                <p style="font-size: 0.9em; color: #666;">Use -1 for last page, or enter the page number (1-indexed)</p>
+                <br>
+            </div>
 
             <!-- Book and Chapter Information -->
             <label for="bookName">Book Name (optional):</label>
@@ -156,10 +274,10 @@
                 <br><br>
             </div>
             <br><br>
-            <button type="submit">Generate MCQs</button>
+            <button type="submit" id="submitButton">Generate MCQs</button>
         </form>
     </div>
-    
+
     <!-- Add status messages before the loader -->
     <div id="statusMessages">
         <div id="uploadStatus" class="status-message info">📤 Uploading your PDF file...</div>
@@ -168,12 +286,20 @@
     </div>
     
     <div class="loader" id="loader"></div>
+
+    <!-- Questions Section (appears first) -->
     <div id="resultContainer" style="display: none;">
         <h2>Generated Questions:</h2>
         <div id="questionsOutput"></div>
     </div>
 
-    <!-- Add this button after the resultContainer div -->
+    <!-- Summary Section (appears below questions) -->
+    <div id="summaryContainer" style="display: none; margin-top: 20px;">
+        <h2>📊 Question Distribution Summary</h2>
+        <div id="summaryOutput" class="summary-box"></div>
+    </div>
+
+    <!-- Download buttons -->
     <div id="downloadContainer" style="display: none; margin-top: 20px;">
         <button id="downloadCsvButton" onclick="downloadCSV()">Download as CSV</button>
         <button id="downloadPdfButton" onclick="downloadPDF()">Download as PDF</button>
@@ -186,11 +312,26 @@
         // Model configurations
         const modelConfigs = {
             openrouter: [
-                { value: 'deepseek/deepseek-chat:free', text: 'DeepSeek V3 (Free)' },
-                { value: 'meta-llama/llama-3.3-70b-instruct:free', text: 'Llama 3.3 70B (Free)' },
-                { value: 'qwen/qwen-2.5-72b-instruct:free', text: 'Qwen 2.5 72B (Free)' },
-                { value: 'mistralai/mistral-7b-instruct:free', text: 'Mistral 7B (Free)' },
-                { value: 'google/gemini-2.0-flash-exp:free', text: 'Gemini 2.0 Flash (Free)' }
+                // Reasoning Models (Best for complex tasks)
+                { value: 'deepseek/deepseek-r1-distill-llama-70b:free', text: 'DeepSeek R1 Distill Llama 70B (Free) - Best Reasoning' },
+                { value: 'deepseek/deepseek-r1-distill-qwen-32b:free', text: 'DeepSeek R1 Distill Qwen 32B (Free) - Good Reasoning' },
+                { value: 'deepseek/deepseek-r1-distill-qwen-14b:free', text: 'DeepSeek R1 Distill Qwen 14B (Free) - Fast Reasoning' },
+
+                // General Purpose Models
+                { value: 'deepseek/deepseek-chat', text: 'DeepSeek V3 - Excellent All-Round' },
+                { value: 'meta-llama/llama-3.1-70b-instruct:free', text: 'Llama 3.1 70B (Free) - High Quality' },
+                { value: 'meta-llama/llama-3.3-70b-instruct:free', text: 'Llama 3.3 70B (Free) - Latest' },
+                { value: 'meta-llama/llama-3.1-8b-instruct:free', text: 'Llama 3.1 8B (Free) - Very Fast' },
+
+                // Specialized Models
+                { value: 'qwen/qwen-2.5-coder-32b-instruct:free', text: 'Qwen 2.5 Coder 32B (Free) - Best for Code' },
+                { value: 'qwen/qwen-2.5-72b-instruct:free', text: 'Qwen 2.5 72B (Free) - High Quality' },
+                { value: 'qwen/qwen-2.5-7b-instruct:free', text: 'Qwen 2.5 7B (Free) - Fast' },
+                { value: 'microsoft/phi-3-medium-128k-instruct:free', text: 'Phi-3 Medium 128K (Free) - Long Context' },
+                { value: 'mistralai/mistral-7b-instruct:free', text: 'Mistral 7B (Free) - Efficient' },
+
+                // Limited Rate Models (Use with caution)
+                { value: 'google/gemini-2.0-flash-exp:free', text: 'Gemini 2.0 Flash (Free) - ⚠️ 4 req/min only' }
             ],
             openai: [
                 { value: 'gpt-3.5-turbo', text: 'GPT-3.5 Turbo' },
@@ -237,19 +378,194 @@
             }
         }
 
-        // Initialize model options on page load
+        // Mode switching function
+        function switchMode(mode) {
+            const generateSection = document.getElementById('generateModeSection');
+            const parseSection = document.getElementById('parseModeSection');
+            const submitButton = document.getElementById('submitButton');
+
+            if (mode === 'generate') {
+                generateSection.style.display = 'block';
+                parseSection.style.display = 'none';
+                submitButton.textContent = 'Generate MCQs';
+            } else {
+                generateSection.style.display = 'none';
+                parseSection.style.display = 'block';
+                submitButton.textContent = 'Parse MCQ PDF';
+            }
+        }
+
+        // Toggle amendment PDF upload section
+        function toggleAmendmentUpload() {
+            const useAmendment = document.getElementById('useAmendment').checked;
+            const amendmentSection = document.getElementById('amendmentUploadSection');
+            const amendmentFile = document.getElementById('amendmentPdfFile');
+
+            if (useAmendment) {
+                amendmentSection.style.display = 'block';
+            } else {
+                amendmentSection.style.display = 'none';
+                amendmentFile.value = '';
+                document.getElementById('amendmentFileInfo').style.display = 'none';
+            }
+        }
+
+        // Handle amendment file selection
         document.addEventListener('DOMContentLoaded', function() {
             updateModelOptions();
+
+            const amendmentFile = document.getElementById('amendmentPdfFile');
+            if (amendmentFile) {
+                amendmentFile.addEventListener('change', function() {
+                    const fileInfo = document.getElementById('amendmentFileInfo');
+                    const fileName = document.getElementById('amendmentFileName');
+
+                    if (this.files && this.files[0]) {
+                        fileName.textContent = this.files[0].name;
+                        fileInfo.style.display = 'block';
+                    } else {
+                        fileInfo.style.display = 'none';
+                    }
+                });
+            }
         });
     
+        function displaySummary(summary) {
+            const summaryContainer = document.getElementById('summaryContainer');
+            const summaryOutput = document.getElementById('summaryOutput');
+
+            if (!summary) {
+                summaryContainer.style.display = 'none';
+                return;
+            }
+
+            let summaryHtml = `
+                <div class="summary-section">
+                    <h3>📈 Overview</h3>
+                    <p><strong>Total Questions:</strong> ${summary.total_questions}</p>
+                    <p><strong>Total Pages:</strong> ${summary.total_pages}</p>
+                    <p><strong>Sections Detected:</strong> ${summary.total_sections}</p>
+                    <p><strong>Coverage:</strong> ${summary.coverage_percentage.toFixed(1)}% of pages (${summary.pages_with_questions.length}/${summary.total_pages} pages)</p>
+                </div>
+            `;
+
+            // Page distribution
+            if (Object.keys(summary.page_distribution).length > 0) {
+                summaryHtml += `
+                    <div class="summary-section">
+                        <h3>📄 Questions per Page</h3>
+                        <div class="page-distribution">
+                `;
+
+                for (const [page, count] of Object.entries(summary.page_distribution).sort((a, b) => a[0] - b[0])) {
+                    summaryHtml += `
+                        <div class="distribution-item">
+                            <strong>Page ${page}</strong><br>
+                            ${count} question${count > 1 ? 's' : ''}
+                        </div>
+                    `;
+                }
+
+                summaryHtml += `
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Section distribution
+            if (Object.keys(summary.section_distribution).length > 0) {
+                summaryHtml += `
+                    <div class="summary-section">
+                        <h3>📚 Questions per Section</h3>
+                        <div class="section-distribution">
+                `;
+
+                for (const [section, count] of Object.entries(summary.section_distribution).sort((a, b) => b[1] - a[1])) {
+                    summaryHtml += `
+                        <div class="distribution-item">
+                            <strong>${section}</strong><br>
+                            ${count} question${count > 1 ? 's' : ''}
+                        </div>
+                    `;
+                }
+
+                summaryHtml += `
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Pages without questions
+            if (summary.pages_without_questions && summary.pages_without_questions.length > 0) {
+                summaryHtml += `
+                    <div class="summary-section">
+                        <h3>⚠️ Pages Without Questions</h3>
+                        <p>${summary.pages_without_questions.join(', ')}</p>
+                    </div>
+                `;
+            }
+
+            summaryOutput.innerHTML = summaryHtml;
+            summaryContainer.style.display = 'block';
+        }
+
+        function displayParseSummary(summary) {
+            const summaryContainer = document.getElementById('summaryContainer');
+            const summaryOutput = document.getElementById('summaryOutput');
+
+            if (!summary) {
+                summaryContainer.style.display = 'none';
+                return;
+            }
+
+            let summaryHtml = `
+                <div class="summary-section">
+                    <h3>📊 Parsing Summary</h3>
+                    <p><strong>Total Questions Extracted:</strong> ${summary.total_questions}</p>
+                    <p><strong>Total Pages:</strong> ${summary.total_pages}</p>
+                    <p><strong>Answer Key Page:</strong> ${summary.answer_page + 1}</p>
+                    <p><strong>Questions with Answers:</strong> ${summary.questions_with_answers}</p>
+                    ${summary.questions_without_answers > 0 ? `<p style="color: #ff9800;"><strong>⚠️ Questions without answers:</strong> ${summary.questions_without_answers}</p>` : ''}
+                </div>
+            `;
+
+            summaryOutput.innerHTML = summaryHtml;
+            summaryContainer.style.display = 'block';
+        }
+
         function displayQuestions(questions) {
             const questionsOutput = document.getElementById('questionsOutput');
             questionsOutput.innerHTML = '';
-            
+
             questions.forEach((q, index) => {
+                // Build metadata display
+                let metadataHtml = '';
+                if (q.metadata) {
+                    const pages = q.metadata.pages || [];
+                    const sections = q.metadata.sections || [];
+
+                    if (pages.length > 0 || sections.length > 0) {
+                        metadataHtml = '<div class="question-metadata">';
+                        metadataHtml += '<strong>📍 Source:</strong> ';
+
+                        if (pages.length > 0) {
+                            metadataHtml += `<span class="metadata-badge">Page${pages.length > 1 ? 's' : ''}: ${pages.join(', ')}</span> `;
+                        }
+
+                        if (sections.length > 0) {
+                            sections.forEach(section => {
+                                metadataHtml += `<span class="metadata-badge">${section}</span> `;
+                            });
+                        }
+
+                        metadataHtml += '</div>';
+                    }
+                }
+
                 const questionHtml = `
                     <div class="question">
-                        <p><strong>Question ${index + 1}:</strong> ${q.question}</p>
+                        <p><strong>Question ${index + 1}:</strong> ${q.text || q.question}</p>
+                        ${metadataHtml}
                         <p>A) ${q.options.A}</p>
                         <p>B) ${q.options.B}</p>
                         <p>C) ${q.options.C}</p>
@@ -329,64 +645,81 @@
             e.preventDefault();
             const fileInput = document.getElementById('pdfFile');
             const file = fileInput.files[0];
-            
+
+            // Get current mode
+            const mode = document.querySelector('input[name="mode"]:checked').value;
+
             const loader = document.getElementById('loader');
             const resultContainer = document.getElementById('resultContainer');
+            const summaryContainer = document.getElementById('summaryContainer');
             const downloadContainer = document.getElementById('downloadContainer');
             const questionsOutput = document.getElementById('questionsOutput');
-            
+            const summaryOutput = document.getElementById('summaryOutput');
+
             // Status message elements
             const uploadStatus = document.getElementById('uploadStatus');
             const extractStatus = document.getElementById('extractStatus');
             const generateStatus = document.getElementById('generateStatus');
-            
+
             function showStatus(element) {
                 // Hide all status messages first
                 [uploadStatus, extractStatus, generateStatus].forEach(el => el.style.display = 'none');
                 // Show the current status
                 element.style.display = 'block';
             }
-    
+
             if (file) {
                 // Reset display
                 loader.style.display = 'block';
                 resultContainer.style.display = 'none';
+                summaryContainer.style.display = 'none';
                 downloadContainer.style.display = 'none';
                 questionsOutput.innerHTML = '';
-                
+                summaryOutput.innerHTML = '';
+
                 // Show initial upload status
                 showStatus(uploadStatus);
-    
+
                 const formData = new FormData();
                 formData.append('pdfFile', file);
-                formData.append('questionCount', document.getElementById('questionCount').value);
-                formData.append('difficulty', document.getElementById('difficulty').value);
-                formData.append('modelProvider', document.getElementById('modelProvider').value);
 
-                // Add book and chapter information
-                formData.append('bookName', document.getElementById('bookName').value);
-                formData.append('chapterName', document.getElementById('chapterName').value);
+                // Determine endpoint and form data based on mode
+                let endpoint = '/upload';
 
-                // Handle model selection
-                const provider = document.getElementById('modelProvider').value;
-                if (provider === 'custom') {
-                    formData.append('modelName', document.getElementById('customModelName').value);
-                    formData.append('customApiKey', document.getElementById('customApiKey').value);
-                    formData.append('customBaseUrl', document.getElementById('customBaseUrl').value);
+                if (mode === 'parse') {
+                    endpoint = '/parse-mcq';
+                    formData.append('answerPage', document.getElementById('answerPage').value);
                 } else {
-                    formData.append('modelName', document.getElementById('modelName').value);
+                    // Generate mode
+                    formData.append('questionCount', document.getElementById('questionCount').value);
+                    formData.append('difficulty', document.getElementById('difficulty').value);
+                    formData.append('modelProvider', document.getElementById('modelProvider').value);
+                    formData.append('bookName', document.getElementById('bookName').value);
+                    formData.append('chapterName', document.getElementById('chapterName').value);
+
+                    // Handle model selection
+                    const provider = document.getElementById('modelProvider').value;
+                    if (provider === 'custom') {
+                        formData.append('modelName', document.getElementById('customModelName').value);
+                        formData.append('customApiKey', document.getElementById('customApiKey').value);
+                        formData.append('customBaseUrl', document.getElementById('customBaseUrl').value);
+                    } else {
+                        formData.append('modelName', document.getElementById('modelName').value);
+                    }
                 }
-                
-                fetch('/upload', {
+
+                fetch(endpoint, {
                     method: 'POST',
                     body: formData
                 })
                 .then(response => {
-                    showStatus(extractStatus); // Show extraction status
+                    showStatus(extractStatus);
                     return response.json();
                 })
                 .then(data => {
-                    showStatus(generateStatus); // Show generation status
+                    if (mode === 'generate') {
+                        showStatus(generateStatus);
+                    }
                     if (data.error) throw new Error(data.error);
                     return data;
                 })
@@ -394,8 +727,20 @@
                     // Hide loader and status messages
                     loader.style.display = 'none';
                     document.getElementById('statusMessages').style.display = 'none';
-                    
+
                     currentQuestions = data.questions;
+
+                    // Display summary if available
+                    if (data.summary) {
+                        if (mode === 'parse') {
+                            // For parse mode, show a simpler summary
+                            displayParseSummary(data.summary);
+                        } else {
+                            displaySummary(data.summary);
+                        }
+                    }
+
+                    // Display questions
                     displayQuestions(currentQuestions);
                     resultContainer.style.display = 'block';
                     downloadContainer.style.display = 'block';
