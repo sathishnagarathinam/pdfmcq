@@ -12,11 +12,40 @@ import pandas as pd
 from fpdf import FPDF
 from io import BytesIO
 import tempfile
+import shutil
+from pathlib import Path
 
-app = Flask(__name__)
+# ============================================
+# Serverless Configuration
+# ============================================
+# Detect if running on Vercel
+IS_VERCEL = os.environ.get('VERCEL_DEPLOYMENT', 'False').lower() == 'true'
+USE_TEMP_DIR = os.environ.get('USE_TEMP_DIRECTORY', 'True').lower() == 'true'
+
+# Use system temp directory for serverless environments
+if IS_VERCEL or USE_TEMP_DIR:
+    UPLOAD_FOLDER = tempfile.gettempdir()
+else:
+    UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', 'uploads')
+
+# Ensure upload folder exists (for local development)
+if not IS_VERCEL:
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+app = Flask(__name__, static_folder='static', static_url_path='/static')
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 52428800  # 50MB max file size
 
 # Global variable to store current questions
 current_questions = None
+
+def cleanup_temp_files(file_path):
+    """Safely cleanup temporary files"""
+    try:
+        if file_path and os.path.exists(file_path):
+            os.remove(file_path)
+    except Exception as e:
+        print(f"Warning: Could not cleanup temp file {file_path}: {e}")
 
 @app.route('/')
 def index():
@@ -61,11 +90,11 @@ def upload_file():
         amendment_file = None
         amendment_text = ""
 
+        amendment_temp_path = None
         if use_amendment and 'amendmentPdfFile' in request.files:
             amendment_file = request.files['amendmentPdfFile']
             if amendment_file and amendment_file.filename != '':
-                amendment_temp_path = os.path.join('uploads', f"amendment_{amendment_file.filename}")
-                os.makedirs('uploads', exist_ok=True)
+                amendment_temp_path = os.path.join(app.config['UPLOAD_FOLDER'], f"amendment_{amendment_file.filename}")
                 amendment_file.save(amendment_temp_path)
                 amendment_text = extract_text_from_pdf(amendment_temp_path)
 
@@ -73,13 +102,11 @@ def upload_file():
                 is_amendment_error = (isinstance(amendment_text, str) and
                                      amendment_text.startswith('Error extracting text from PDF:'))
                 if is_amendment_error:
-                    if os.path.exists(amendment_temp_path):
-                        os.remove(amendment_temp_path)
+                    cleanup_temp_files(amendment_temp_path)
                     return jsonify({'error': 'Failed to extract amendment PDF', 'details': amendment_text}), 400
 
         # Save file temporarily
-        temp_path = os.path.join('uploads', file.filename)
-        os.makedirs('uploads', exist_ok=True)
+        temp_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
         file.save(temp_path)
 
         # Extract text and generate questions
@@ -95,8 +122,8 @@ def upload_file():
 
         if is_error:
             # Clean up before returning error
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
+            cleanup_temp_files(temp_path)
+            cleanup_temp_files(amendment_temp_path)
 
             # Return detailed error message
             error_response = {
@@ -130,8 +157,8 @@ def upload_file():
 
         # Check if extracted text is empty
         if not extracted_text.strip():
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
+            cleanup_temp_files(temp_path)
+            cleanup_temp_files(amendment_temp_path)
             return jsonify({
                 'error': 'Empty PDF Content',
                 'details': 'The PDF appears to be empty or contains no readable text.',
@@ -179,11 +206,9 @@ def upload_file():
             model_config=model_config
         )
 
-        # Clean up
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
-        if amendment_file and 'amendment_temp_path' in locals() and os.path.exists(amendment_temp_path):
-            os.remove(amendment_temp_path)
+        # Clean up temporary files
+        cleanup_temp_files(temp_path)
+        cleanup_temp_files(amendment_temp_path)
 
         # Check if generation failed
         if 'error' in result:
