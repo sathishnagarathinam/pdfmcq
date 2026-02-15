@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify, send_file, redirect, url_for, flash
 import os
 import json
 import sys
@@ -18,6 +18,16 @@ from io import BytesIO
 import tempfile
 import shutil
 from pathlib import Path
+import bcrypt
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from flask_wtf import FlaskForm
+from flask_wtf.csrf import CSRFProtect
+from wtforms import StringField, PasswordField, SubmitField
+from wtforms.validators import DataRequired
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # ============================================
 # Serverless Configuration
@@ -36,6 +46,65 @@ app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 52428800  # 50MB max file size
 
+# Secret key for session management (loaded from .env)
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fallback-dev-key-change-in-production')
+
+# Initialize CSRF protection
+csrf = CSRFProtect(app)
+
+# Initialize Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+login_manager.login_message = 'Please log in to access this page.'
+login_manager.login_message_category = 'info'
+
+
+@login_manager.unauthorized_handler
+def unauthorized():
+    """Handle unauthorized access - return JSON for AJAX, redirect for pages"""
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.content_type == 'application/json':
+        return jsonify({'error': 'Authentication required. Please log in.'}), 401
+    return redirect(url_for('login', next=request.url))
+
+# ============================================
+# Authentication Configuration
+# ============================================
+# Hardcoded user with bcrypt-hashed password (cost factor 12)
+# Username: sathishsat04
+# Password hash generated with bcrypt.gensalt(rounds=12)
+USERS = {
+    'sathishsat04': {
+        'id': '1',
+        'username': 'sathishsat04',
+        'password_hash': '$2b$12$Z/AfIKQmaWHxw0z4Qtzu0uHal0p7GQmJDOzhKBRp433lOkdsFIxVG'
+    }
+}
+
+
+class User(UserMixin):
+    """User model for Flask-Login"""
+    def __init__(self, user_id, username):
+        self.id = user_id
+        self.username = username
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    """Load user by ID for Flask-Login session management"""
+    for username, user_data in USERS.items():
+        if user_data['id'] == user_id:
+            return User(user_data['id'], username)
+    return None
+
+
+class LoginForm(FlaskForm):
+    """Login form with CSRF protection"""
+    username = StringField('Username', validators=[DataRequired()])
+    password = PasswordField('Password', validators=[DataRequired()])
+    submit = SubmitField('Login')
+
+
 # Global variable to store current questions
 current_questions = None
 
@@ -47,11 +116,49 @@ def cleanup_temp_files(file_path):
     except Exception as e:
         print(f"Warning: Could not cleanup temp file {file_path}: {e}")
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """Login page and authentication handler"""
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+
+    form = LoginForm()
+    if form.validate_on_submit():
+        username = form.username.data
+        password = form.password.data
+
+        # Check if user exists
+        user_data = USERS.get(username)
+        if user_data:
+            # Verify password against bcrypt hash
+            if bcrypt.checkpw(password.encode('utf-8'), user_data['password_hash'].encode('utf-8')):
+                user = User(user_data['id'], username)
+                login_user(user)
+                # Redirect to the page they were trying to access, or home
+                next_page = request.args.get('next')
+                return redirect(next_page or url_for('index'))
+
+        flash('Invalid username or password', 'error')
+
+    return render_template('login.html', form=form)
+
+
+@app.route('/logout')
+@login_required
+def logout():
+    """Logout and redirect to login page"""
+    logout_user()
+    flash('You have been logged out.', 'info')
+    return redirect(url_for('login'))
+
+
 @app.route('/')
+@login_required
 def index():
     return render_template('index.html')
 
 @app.route('/capabilities', methods=['GET'])
+@login_required
 def get_capabilities():
     """Get information about available generation methods"""
     try:
@@ -61,6 +168,8 @@ def get_capabilities():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/upload', methods=['POST'])
+@csrf.exempt
+@login_required
 def upload_file():
     global current_questions
 
@@ -262,6 +371,8 @@ def upload_file():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/download-csv', methods=['POST'])
+@csrf.exempt
+@login_required
 def download_csv():
     try:
         questions = request.json
@@ -299,6 +410,8 @@ def download_csv():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/download-pdf', methods=['POST'])
+@csrf.exempt
+@login_required
 def download_pdf():
     try:
         questions = request.json
@@ -455,6 +568,8 @@ def download_pdf():
 
 
 @app.route('/parse-mcq', methods=['POST'])
+@csrf.exempt
+@login_required
 def parse_mcq():
     """Parse an existing MCQ PDF and extract questions with answers"""
     global current_questions
@@ -550,6 +665,8 @@ def parse_mcq():
 
 
 @app.route('/debug-pdf', methods=['POST'])
+@csrf.exempt
+@login_required
 def debug_pdf():
     """Debug endpoint to analyze PDF content and identify issues"""
     try:

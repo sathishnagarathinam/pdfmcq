@@ -168,7 +168,13 @@
     </style>
 </head>
 <body>
-    <h1>PDF MCQ Generator-sathish</h1>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h1 style="margin: 0;">PDF MCQ Generator-sathish</h1>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <span style="color: #666; font-size: 14px;">👤 {{ current_user.username }}</span>
+            <a href="{{ url_for('logout') }}" style="background-color: #f44336; color: white; padding: 8px 16px; text-decoration: none; border-radius: 5px; font-size: 14px; font-weight: bold;">🚪 Logout</a>
+        </div>
+    </div>
 
     <!-- Mode Selector -->
     <div style="background-color: #f0f0f0; padding: 15px; border-radius: 5px; margin-bottom: 20px;">

@@ -15,6 +15,11 @@ pandas>=2.1.0
 openai>=1.0.0
 requests>=2.31.0
 
+# Authentication
+flask-login==0.6.3
+bcrypt==4.1.2
+flask-wtf==1.2.1
+
 # Utilities
 Werkzeug==2.3.7
 Jinja2==3.1.2
