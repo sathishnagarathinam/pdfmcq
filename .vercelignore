@@ -22,11 +22,11 @@ run_offline_app.py
 uploads/
 *.pdf
 
-# Streamlit app (not used on Vercel)
-app.py
+# Streamlit app (not used on Vercel) - /app.py = root only, won't match api/app.py
+/app.py
 
-# Root-level index.py conflicts with api/index.py
-index.py
+# Root-level index.py only - /index.py won't match api/index.py
+/index.py
 
 # Documentation (not needed at runtime)
 *.md
