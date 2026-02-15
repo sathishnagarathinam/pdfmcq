@@ -1,6 +1,9 @@
 # PDF MCQ Generator - Vercel Deployment Requirements
 # Lightweight version optimized for serverless environment
 
+# Build Dependencies (required for pandas and other packages)
+setuptools>=65.0.0
+
 # Core Dependencies
 Flask==2.3.3
 PyPDF2==3.0.1
