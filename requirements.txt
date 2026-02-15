@@ -1,0 +1,17 @@
+# PDF MCQ Generator - Vercel Deployment Requirements
+# Lightweight version optimized for serverless environment
+
+# Core Dependencies
+Flask==2.3.3
+PyPDF2==3.0.1
+python-dotenv==1.0.0
+fpdf2==2.7.0
+pandas==2.0.3
+
+# API Integration
+openai>=1.0.0
+requests>=2.31.0
+
+# Utilities
+Werkzeug==2.3.7
+Jinja2==3.1.2
