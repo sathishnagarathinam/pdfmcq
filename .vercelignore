@@ -1,0 +1,47 @@
+# ML model directories (not needed on Vercel - using API-based generation)
+models/
+fast_models/
+enhanced_models/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Test files
+test_*.py
+final_quality_test.py
+debug_*.py
+quick_online_test.py
+
+# Setup scripts (local-only)
+setup_*.py
+run_offline_app.py
+
+# Local data
+uploads/
+*.pdf
+
+# Streamlit app (not used on Vercel)
+app.py
+
+# Root-level index.py conflicts with api/index.py
+index.py
+
+# Documentation (not needed at runtime)
+*.md
+
+# Garbage files from bad pip commands
+=*
+
+# Misc
+.env
+offline_config.json
+offline_config.py
+pdfmcq1/
+create_*.py
+fix_*.py
+upload_to_github.sh
+public/
+requirements-vercel.txt
+

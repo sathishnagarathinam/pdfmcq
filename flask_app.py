@@ -1,31 +1,16 @@
 from flask import Flask, render_template, request, jsonify, send_file
 import os
 import json
-import logging
 import sys
 
-# Configure logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
+from mcq_generator import (
+    extract_text_from_pdf, generate_mcq_questions, generate_mcq_questions_advanced,
+    estimate_max_questions, estimate_max_questions_detailed,
+    generate_mcq_questions_with_offline_fallback, get_generation_capabilities,
+    generate_mcq_questions_with_metadata
+)
 
-try:
-    from mcq_generator import (
-        extract_text_from_pdf, generate_mcq_questions, generate_mcq_questions_advanced,
-        estimate_max_questions, estimate_max_questions_detailed,
-        generate_mcq_questions_with_offline_fallback, get_generation_capabilities,
-        generate_mcq_questions_with_metadata
-    )
-    logger.info("Successfully imported mcq_generator")
-except Exception as e:
-    logger.error(f"Failed to import mcq_generator: {e}", exc_info=True)
-    raise
-
-try:
-    from mcq_parser import parse_mcq_pdf, debug_pdf_content
-    logger.info("Successfully imported mcq_parser")
-except Exception as e:
-    logger.error(f"Failed to import mcq_parser: {e}", exc_info=True)
-    raise
+from mcq_parser import parse_mcq_pdf, debug_pdf_content
 
 import pandas as pd
 from fpdf import FPDF
@@ -37,21 +22,17 @@ from pathlib import Path
 # ============================================
 # Serverless Configuration
 # ============================================
-# Detect if running on Vercel
-IS_VERCEL = os.environ.get('VERCEL_DEPLOYMENT', 'False').lower() == 'true'
-USE_TEMP_DIR = os.environ.get('USE_TEMP_DIRECTORY', 'True').lower() == 'true'
+# Detect if running on Vercel (VERCEL env var is set automatically by Vercel)
+IS_VERCEL = bool(os.environ.get('VERCEL'))
 
 # Use system temp directory for serverless environments
-if IS_VERCEL or USE_TEMP_DIR:
+if IS_VERCEL:
     UPLOAD_FOLDER = tempfile.gettempdir()
 else:
     UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', 'uploads')
-
-# Ensure upload folder exists (for local development)
-if not IS_VERCEL:
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-app = Flask(__name__, static_folder='static', static_url_path='/static')
+app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 52428800  # 50MB max file size
 
