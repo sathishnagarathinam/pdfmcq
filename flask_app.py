@@ -475,8 +475,8 @@ def parse_mcq():
             answer_page_index = -1
 
         # Save file temporarily
-        temp_path = os.path.join('uploads', file.filename)
-        os.makedirs('uploads', exist_ok=True)
+        temp_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
         file.save(temp_path)
 
         try:
@@ -561,8 +561,8 @@ def debug_pdf():
             return jsonify({'error': 'No file selected'}), 400
 
         # Save file temporarily
-        temp_path = os.path.join('uploads', file.filename)
-        os.makedirs('uploads', exist_ok=True)
+        temp_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
         file.save(temp_path)
 
         try:

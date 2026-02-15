@@ -94,3 +94,6 @@ ocr_*.py
 # PDF test files
 test_*.pdf
 *.pdf
+
+# Garbage files from bad pip commands
+=*
