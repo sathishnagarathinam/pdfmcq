@@ -1,13 +1,32 @@
 from flask import Flask, render_template, request, jsonify, send_file
 import os
 import json
-from mcq_generator import (
-    extract_text_from_pdf, generate_mcq_questions, generate_mcq_questions_advanced,
-    estimate_max_questions, estimate_max_questions_detailed,
-    generate_mcq_questions_with_offline_fallback, get_generation_capabilities,
-    generate_mcq_questions_with_metadata
-)
-from mcq_parser import parse_mcq_pdf, debug_pdf_content
+import logging
+import sys
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+try:
+    from mcq_generator import (
+        extract_text_from_pdf, generate_mcq_questions, generate_mcq_questions_advanced,
+        estimate_max_questions, estimate_max_questions_detailed,
+        generate_mcq_questions_with_offline_fallback, get_generation_capabilities,
+        generate_mcq_questions_with_metadata
+    )
+    logger.info("Successfully imported mcq_generator")
+except Exception as e:
+    logger.error(f"Failed to import mcq_generator: {e}", exc_info=True)
+    raise
+
+try:
+    from mcq_parser import parse_mcq_pdf, debug_pdf_content
+    logger.info("Successfully imported mcq_parser")
+except Exception as e:
+    logger.error(f"Failed to import mcq_parser: {e}", exc_info=True)
+    raise
+
 import pandas as pd
 from fpdf import FPDF
 from io import BytesIO

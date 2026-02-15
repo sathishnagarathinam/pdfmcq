@@ -2,6 +2,17 @@
   "version": 2,
   "buildCommand": "uv pip install -r requirements.txt --system",
   "outputDirectory": ".",
+  "builds": [
+    {
+      "src": "api/index.py",
+      "use": "@vercel/python",
+      "config": {
+        "pythonVersion": "3.12",
+        "maxDuration": 60,
+        "memory": 3008
+      }
+    }
+  ],
   "routes": [
     {
       "src": "/static/(.*)",
@@ -13,6 +24,8 @@
     }
   ],
   "env": {
-    "PYTHONUNBUFFERED": "1"
+    "PYTHONUNBUFFERED": "1",
+    "VERCEL_DEPLOYMENT": "true",
+    "USE_TEMP_DIRECTORY": "true"
   }
 }
