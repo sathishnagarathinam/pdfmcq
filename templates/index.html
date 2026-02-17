@@ -182,9 +182,13 @@
             <input type="radio" name="mode" value="generate" checked onchange="switchMode('generate')">
             🤖 Generate New MCQs from PDF Content
         </label>
-        <label style="font-weight: bold;">
+        <label style="font-weight: bold; margin-right: 20px;">
             <input type="radio" name="mode" value="parse" onchange="switchMode('parse')">
             📋 Parse Existing MCQ PDF
+        </label>
+        <label style="font-weight: bold;">
+            <input type="radio" name="mode" value="split" onchange="switchMode('split')">
+            ✂️ Split PDF File
         </label>
     </div>
 
@@ -241,6 +245,41 @@
                 <br>
             </div>
 
+            <!-- Split Mode Section -->
+            <div id="splitModeSection" style="display: none;">
+                <label for="splitMode" style="font-weight: bold;">Split Method:</label>
+                <select id="splitMode" name="splitMode" onchange="updateSplitOptions()">
+                    <option value="pages_per_file" selected>Split by Pages Per File</option>
+                    <option value="page_ranges">Split by Page Ranges</option>
+                    <option value="individual_pages">Split into Individual Pages</option>
+                </select>
+                <br><br>
+
+                <!-- Pages Per File Option -->
+                <div id="pagesPerFileOption">
+                    <label for="pagesPerFile">Number of Pages Per File:</label>
+                    <input type="number" id="pagesPerFile" name="pagesPerFile" min="1" value="5" placeholder="e.g., 5">
+                    <p style="font-size: 0.9em; color: #666;">Each split file will contain this many pages (except possibly the last one)</p>
+                    <br>
+                </div>
+
+                <!-- Page Ranges Option -->
+                <div id="pageRangesOption" style="display: none;">
+                    <label for="pageRanges">Page Ranges (comma-separated):</label>
+                    <input type="text" id="pageRanges" name="pageRanges" placeholder="e.g., 1-5, 6-10, 11-15">
+                    <p style="font-size: 0.9em; color: #666;">Specify ranges as start-end (1-indexed). Example: 1-5, 6-10, 11-15</p>
+                    <br>
+                </div>
+
+                <!-- Individual Pages Option -->
+                <div id="individualPagesOption" style="display: none;">
+                    <p style="font-size: 0.9em; color: #666; background-color: #e3f2fd; padding: 10px; border-radius: 4px;">
+                        ℹ️ Each page will be saved as a separate PDF file. This is useful for organizing large documents.
+                    </p>
+                    <br>
+                </div>
+            </div>
+
             <!-- Book and Chapter Information -->
             <label for="bookName">Book Name (optional):</label>
             <input type="text" id="bookName" name="bookName" placeholder="e.g., Introduction to Computer Science">
@@ -282,6 +321,23 @@
             <br><br>
             <button type="submit" id="submitButton">Generate MCQs</button>
         </form>
+    </div>
+
+    <!-- Split PDF Results Section -->
+    <div id="splitResultContainer" style="display: none;">
+        <h2>✂️ PDF Split Results:</h2>
+        <div style="background-color: #e8f5e9; padding: 15px; border-radius: 5px; margin: 15px 0;">
+            <p id="splitMessage" style="color: #2e7d32; font-weight: bold;"></p>
+            <p style="color: #666; font-size: 0.9em;">
+                <strong>Total Pages:</strong> <span id="totalPages"></span> |
+                <strong>Split Files:</strong> <span id="splitCount"></span>
+            </p>
+        </div>
+
+        <h3>📥 Download Split Files:</h3>
+        <div id="splitFilesContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; margin: 15px 0;">
+            <!-- Split files will be listed here -->
+        </div>
     </div>
 
     <!-- Add status messages before the loader -->
@@ -388,16 +444,51 @@
         function switchMode(mode) {
             const generateSection = document.getElementById('generateModeSection');
             const parseSection = document.getElementById('parseModeSection');
+            const splitSection = document.getElementById('splitModeSection');
             const submitButton = document.getElementById('submitButton');
+            const amendmentSection = document.getElementById('amendmentUploadSection');
+            const useAmendment = document.getElementById('useAmendment');
 
             if (mode === 'generate') {
                 generateSection.style.display = 'block';
                 parseSection.style.display = 'none';
+                splitSection.style.display = 'none';
                 submitButton.textContent = 'Generate MCQs';
-            } else {
+                useAmendment.parentElement.parentElement.style.display = 'block';
+            } else if (mode === 'parse') {
                 generateSection.style.display = 'none';
                 parseSection.style.display = 'block';
+                splitSection.style.display = 'none';
                 submitButton.textContent = 'Parse MCQ PDF';
+                useAmendment.parentElement.parentElement.style.display = 'none';
+            } else if (mode === 'split') {
+                generateSection.style.display = 'none';
+                parseSection.style.display = 'none';
+                splitSection.style.display = 'block';
+                submitButton.textContent = 'Split PDF';
+                useAmendment.parentElement.parentElement.style.display = 'none';
+            }
+        }
+
+        // Update split options based on selected method
+        function updateSplitOptions() {
+            const splitMode = document.getElementById('splitMode').value;
+            const pagesPerFileOption = document.getElementById('pagesPerFileOption');
+            const pageRangesOption = document.getElementById('pageRangesOption');
+            const individualPagesOption = document.getElementById('individualPagesOption');
+
+            // Hide all options first
+            pagesPerFileOption.style.display = 'none';
+            pageRangesOption.style.display = 'none';
+            individualPagesOption.style.display = 'none';
+
+            // Show selected option
+            if (splitMode === 'pages_per_file') {
+                pagesPerFileOption.style.display = 'block';
+            } else if (splitMode === 'page_ranges') {
+                pageRangesOption.style.display = 'block';
+            } else if (splitMode === 'individual_pages') {
+                individualPagesOption.style.display = 'block';
             }
         }
 
@@ -646,7 +737,69 @@
                 alert('Error downloading PDF. Please try again.');
             });
         }
-    
+
+        function displaySplitResults(data) {
+            const splitResultContainer = document.getElementById('splitResultContainer');
+            const splitMessage = document.getElementById('splitMessage');
+            const totalPages = document.getElementById('totalPages');
+            const splitCount = document.getElementById('splitCount');
+            const filesContainer = document.getElementById('splitFilesContainer');
+
+            // Update summary information
+            splitMessage.textContent = data.message;
+            totalPages.textContent = data.total_pages;
+            splitCount.textContent = data.split_count;
+
+            // Clear previous files
+            filesContainer.innerHTML = '';
+
+            // Display each split file with download button
+            data.files.forEach((file, index) => {
+                const fileCard = document.createElement('div');
+                fileCard.style.cssText = `
+                    background-color: #f5f5f5;
+                    border: 1px solid #ddd;
+                    border-radius: 5px;
+                    padding: 15px;
+                    text-align: center;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                `;
+
+                const fileName = document.createElement('p');
+                fileName.style.cssText = 'font-weight: bold; margin: 0 0 10px 0; word-break: break-word;';
+                fileName.textContent = file.filename;
+
+                const fileSize = document.createElement('p');
+                fileSize.style.cssText = 'color: #666; font-size: 0.9em; margin: 0 0 10px 0;';
+                fileSize.textContent = `Size: ${file.size}`;
+
+                const downloadBtn = document.createElement('a');
+                downloadBtn.href = `/download-split-pdf/${data.session_id}/${file.filename}`;
+                downloadBtn.style.cssText = `
+                    display: inline-block;
+                    background-color: #4CAF50;
+                    color: white;
+                    padding: 10px 15px;
+                    text-decoration: none;
+                    border-radius: 4px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    transition: background-color 0.3s;
+                `;
+                downloadBtn.textContent = '📥 Download';
+                downloadBtn.onmouseover = function() { this.style.backgroundColor = '#45a049'; };
+                downloadBtn.onmouseout = function() { this.style.backgroundColor = '#4CAF50'; };
+
+                fileCard.appendChild(fileName);
+                fileCard.appendChild(fileSize);
+                fileCard.appendChild(downloadBtn);
+                filesContainer.appendChild(fileCard);
+            });
+
+            // Show the results container
+            splitResultContainer.style.display = 'block';
+        }
+
         document.getElementById('uploadForm').addEventListener('submit', function(e) {
             e.preventDefault();
             const fileInput = document.getElementById('pdfFile');
@@ -680,6 +833,7 @@
                 resultContainer.style.display = 'none';
                 summaryContainer.style.display = 'none';
                 downloadContainer.style.display = 'none';
+                document.getElementById('splitResultContainer').style.display = 'none';
                 questionsOutput.innerHTML = '';
                 summaryOutput.innerHTML = '';
 
@@ -695,6 +849,11 @@
                 if (mode === 'parse') {
                     endpoint = '/parse-mcq';
                     formData.append('answerPage', document.getElementById('answerPage').value);
+                } else if (mode === 'split') {
+                    endpoint = '/split-pdf';
+                    formData.append('splitMode', document.getElementById('splitMode').value);
+                    formData.append('pagesPerFile', document.getElementById('pagesPerFile').value);
+                    formData.append('pageRanges', document.getElementById('pageRanges').value);
                 } else {
                     // Generate mode
                     formData.append('questionCount', document.getElementById('questionCount').value);
@@ -734,22 +893,27 @@
                     loader.style.display = 'none';
                     document.getElementById('statusMessages').style.display = 'none';
 
-                    currentQuestions = data.questions;
+                    if (mode === 'split') {
+                        // Handle split mode response
+                        displaySplitResults(data);
+                    } else {
+                        currentQuestions = data.questions;
 
-                    // Display summary if available
-                    if (data.summary) {
-                        if (mode === 'parse') {
-                            // For parse mode, show a simpler summary
-                            displayParseSummary(data.summary);
-                        } else {
-                            displaySummary(data.summary);
+                        // Display summary if available
+                        if (data.summary) {
+                            if (mode === 'parse') {
+                                // For parse mode, show a simpler summary
+                                displayParseSummary(data.summary);
+                            } else {
+                                displaySummary(data.summary);
+                            }
                         }
-                    }
 
-                    // Display questions
-                    displayQuestions(currentQuestions);
-                    resultContainer.style.display = 'block';
-                    downloadContainer.style.display = 'block';
+                        // Display questions
+                        displayQuestions(currentQuestions);
+                        resultContainer.style.display = 'block';
+                        downloadContainer.style.display = 'block';
+                    }
                 })
                 .catch(error => {
                     loader.style.display = 'none';

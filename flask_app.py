@@ -25,6 +25,8 @@ from flask_wtf.csrf import CSRFProtect
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired
 from dotenv import load_dotenv
+from PyPDF2 import PdfReader, PdfWriter
+import uuid
 
 # Load environment variables from .env file
 load_dotenv()
@@ -115,6 +117,151 @@ def cleanup_temp_files(file_path):
             os.remove(file_path)
     except Exception as e:
         print(f"Warning: Could not cleanup temp file {file_path}: {e}")
+
+
+# ============================================
+# PDF Splitting Functions
+# ============================================
+
+def split_pdf_by_pages_per_file(pdf_path, pages_per_file):
+    """
+    Split PDF into multiple files with specified number of pages per file
+
+    Args:
+        pdf_path: Path to the PDF file
+        pages_per_file: Number of pages in each split file
+
+    Returns:
+        List of tuples (filename, file_path) for split PDFs
+    """
+    try:
+        reader = PdfReader(pdf_path)
+        total_pages = len(reader.pages)
+
+        if pages_per_file <= 0:
+            raise ValueError("Pages per file must be greater than 0")
+
+        if pages_per_file >= total_pages:
+            raise ValueError(f"Pages per file ({pages_per_file}) must be less than total pages ({total_pages})")
+
+        split_files = []
+        temp_dir = tempfile.mkdtemp()
+
+        # Calculate number of output files
+        num_files = (total_pages + pages_per_file - 1) // pages_per_file
+
+        for file_num in range(num_files):
+            writer = PdfWriter()
+            start_page = file_num * pages_per_file
+            end_page = min(start_page + pages_per_file, total_pages)
+
+            # Add pages to this file
+            for page_num in range(start_page, end_page):
+                writer.add_page(reader.pages[page_num])
+
+            # Generate filename
+            original_name = os.path.splitext(os.path.basename(pdf_path))[0]
+            output_filename = f"{original_name}_part_{file_num + 1}_pages_{start_page + 1}-{end_page}.pdf"
+            output_path = os.path.join(temp_dir, output_filename)
+
+            # Write the split PDF
+            with open(output_path, 'wb') as output_file:
+                writer.write(output_file)
+
+            split_files.append((output_filename, output_path))
+
+        return split_files, temp_dir
+
+    except Exception as e:
+        raise Exception(f"Error splitting PDF by pages: {str(e)}")
+
+
+def split_pdf_by_page_ranges(pdf_path, page_ranges):
+    """
+    Split PDF into multiple files based on specified page ranges
+
+    Args:
+        pdf_path: Path to the PDF file
+        page_ranges: List of tuples [(start, end), ...] (1-indexed, inclusive)
+
+    Returns:
+        List of tuples (filename, file_path) for split PDFs
+    """
+    try:
+        reader = PdfReader(pdf_path)
+        total_pages = len(reader.pages)
+
+        split_files = []
+        temp_dir = tempfile.mkdtemp()
+
+        for range_num, (start, end) in enumerate(page_ranges):
+            # Convert to 0-indexed
+            start_idx = start - 1
+            end_idx = end
+
+            # Validate range
+            if start_idx < 0 or end_idx > total_pages or start_idx >= end_idx:
+                raise ValueError(f"Invalid page range: {start}-{end}. Total pages: {total_pages}")
+
+            writer = PdfWriter()
+
+            # Add pages to this file
+            for page_num in range(start_idx, end_idx):
+                writer.add_page(reader.pages[page_num])
+
+            # Generate filename
+            original_name = os.path.splitext(os.path.basename(pdf_path))[0]
+            output_filename = f"{original_name}_range_{range_num + 1}_pages_{start}-{end}.pdf"
+            output_path = os.path.join(temp_dir, output_filename)
+
+            # Write the split PDF
+            with open(output_path, 'wb') as output_file:
+                writer.write(output_file)
+
+            split_files.append((output_filename, output_path))
+
+        return split_files, temp_dir
+
+    except Exception as e:
+        raise Exception(f"Error splitting PDF by ranges: {str(e)}")
+
+
+def split_pdf_into_individual_pages(pdf_path):
+    """
+    Split PDF into individual page files
+
+    Args:
+        pdf_path: Path to the PDF file
+
+    Returns:
+        List of tuples (filename, file_path) for split PDFs
+    """
+    try:
+        reader = PdfReader(pdf_path)
+        total_pages = len(reader.pages)
+
+        split_files = []
+        temp_dir = tempfile.mkdtemp()
+
+        for page_num in range(total_pages):
+            writer = PdfWriter()
+            writer.add_page(reader.pages[page_num])
+
+            # Generate filename
+            original_name = os.path.splitext(os.path.basename(pdf_path))[0]
+            output_filename = f"{original_name}_page_{page_num + 1}.pdf"
+            output_path = os.path.join(temp_dir, output_filename)
+
+            # Write the split PDF
+            with open(output_path, 'wb') as output_file:
+                writer.write(output_file)
+
+            split_files.append((output_filename, output_path))
+
+        return split_files, temp_dir
+
+    except Exception as e:
+        raise Exception(f"Error splitting PDF into individual pages: {str(e)}")
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -705,6 +852,151 @@ def debug_pdf():
             'error': f'Error debugging PDF: {str(e)}',
             'traceback': traceback.format_exc()
         }), 500
+
+
+@app.route('/split-pdf', methods=['POST'])
+@csrf.exempt
+@login_required
+def split_pdf():
+    """Split PDF file based on user-specified parameters"""
+    if 'pdfFile' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+
+    file = request.files['pdfFile']
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+
+    # Get split parameters
+    split_mode = request.form.get('splitMode', 'pages_per_file')
+    pages_per_file = request.form.get('pagesPerFile', '')
+    page_ranges = request.form.get('pageRanges', '')
+
+    # Save file temporarily
+    temp_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    file.save(temp_path)
+
+    try:
+        # Get total pages first
+        reader = PdfReader(temp_path)
+        total_pages = len(reader.pages)
+
+        split_files = []
+        temp_dir = None
+
+        if split_mode == 'pages_per_file':
+            # Split by pages per file
+            if not pages_per_file or not pages_per_file.isdigit():
+                return jsonify({'error': 'Please specify a valid number of pages per file'}), 400
+
+            pages_per_file = int(pages_per_file)
+            split_files, temp_dir = split_pdf_by_pages_per_file(temp_path, pages_per_file)
+
+        elif split_mode == 'page_ranges':
+            # Split by page ranges
+            if not page_ranges:
+                return jsonify({'error': 'Please specify page ranges'}), 400
+
+            # Parse page ranges (format: "1-5, 6-10, 11-15")
+            ranges = []
+            try:
+                for range_str in page_ranges.split(','):
+                    range_str = range_str.strip()
+                    if '-' in range_str:
+                        start, end = range_str.split('-')
+                        ranges.append((int(start.strip()), int(end.strip())))
+                    else:
+                        return jsonify({'error': f'Invalid range format: {range_str}. Use format: 1-5, 6-10'}), 400
+            except ValueError:
+                return jsonify({'error': 'Invalid page range format. Use numbers only.'}), 400
+
+            split_files, temp_dir = split_pdf_by_page_ranges(temp_path, ranges)
+
+        elif split_mode == 'individual_pages':
+            # Split into individual pages
+            split_files, temp_dir = split_pdf_into_individual_pages(temp_path)
+
+        else:
+            return jsonify({'error': 'Invalid split mode'}), 400
+
+        # Create a session ID for this split operation
+        session_id = str(uuid.uuid4())
+
+        # Store split files info in session
+        if 'split_sessions' not in app.config:
+            app.config['split_sessions'] = {}
+
+        app.config['split_sessions'][session_id] = {
+            'files': split_files,
+            'temp_dir': temp_dir,
+            'created_at': pd.Timestamp.now()
+        }
+
+        # Prepare response with file information
+        files_info = []
+        for filename, filepath in split_files:
+            file_size = os.path.getsize(filepath)
+            files_info.append({
+                'filename': filename,
+                'size': f"{file_size / 1024:.2f} KB",
+                'download_id': f"{session_id}_{filename}"
+            })
+
+        return jsonify({
+            'success': True,
+            'message': f'✅ Successfully split PDF into {len(split_files)} file(s)',
+            'session_id': session_id,
+            'total_pages': total_pages,
+            'split_count': len(split_files),
+            'files': files_info
+        }), 200
+
+    except Exception as e:
+        print(f"Error splitting PDF: {e}")
+        import traceback
+        return jsonify({
+            'error': f'Error splitting PDF: {str(e)}',
+            'traceback': traceback.format_exc()
+        }), 500
+
+    finally:
+        # Clean up original uploaded file
+        if os.path.exists(temp_path):
+            cleanup_temp_files(temp_path)
+
+
+@app.route('/download-split-pdf/<session_id>/<filename>', methods=['GET'])
+@login_required
+def download_split_pdf(session_id, filename):
+    """Download a split PDF file"""
+    try:
+        if 'split_sessions' not in app.config or session_id not in app.config['split_sessions']:
+            return jsonify({'error': 'Session not found or expired'}), 404
+
+        session_data = app.config['split_sessions'][session_id]
+        split_files = session_data['files']
+
+        # Find the requested file
+        file_path = None
+        for fname, fpath in split_files:
+            if fname == filename:
+                file_path = fpath
+                break
+
+        if not file_path or not os.path.exists(file_path):
+            return jsonify({'error': 'File not found'}), 404
+
+        # Send the file
+        return send_file(
+            file_path,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='application/pdf'
+        )
+
+    except Exception as e:
+        print(f"Error downloading split PDF: {e}")
+        return jsonify({'error': f'Error downloading file: {str(e)}'}), 500
 
 
 # For Vercel deployment - this must be at module level
