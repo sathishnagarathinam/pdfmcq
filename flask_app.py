@@ -965,11 +965,16 @@ def split_pdf():
             cleanup_temp_files(temp_path)
 
 
-@app.route('/download-split-pdf/<session_id>/<filename>', methods=['GET'])
+@app.route('/download-split-pdf/<session_id>/<path:filename>', methods=['GET'])
 @login_required
 def download_split_pdf(session_id, filename):
     """Download a split PDF file"""
     try:
+        from urllib.parse import unquote
+
+        # Decode the filename from URL encoding
+        filename = unquote(filename)
+
         if 'split_sessions' not in app.config or session_id not in app.config['split_sessions']:
             return jsonify({'error': 'Session not found or expired'}), 404
 

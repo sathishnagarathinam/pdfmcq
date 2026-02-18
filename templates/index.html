@@ -774,7 +774,7 @@
                 fileSize.textContent = `Size: ${file.size}`;
 
                 const downloadBtn = document.createElement('a');
-                downloadBtn.href = `/download-split-pdf/${data.session_id}/${file.filename}`;
+                downloadBtn.href = `/download-split-pdf/${data.session_id}/${encodeURIComponent(file.filename)}`;
                 downloadBtn.style.cssText = `
                     display: inline-block;
                     background-color: #4CAF50;
