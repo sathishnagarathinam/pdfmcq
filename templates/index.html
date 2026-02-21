@@ -72,6 +72,48 @@
             border: 1px solid #ffcdd2;
         }
 
+        /* Upload Progress Bar Styling */
+        #uploadProgressContainer {
+            display: none;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        #uploadProgressLabel {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        #uploadProgressBar {
+            width: 100%;
+            height: 30px;
+            background-color: #f0f0f0;
+            border-radius: 15px;
+            overflow: hidden;
+            border: 2px solid #4CAF50;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        #uploadProgressFill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #45a049);
+            width: 0%;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        #uploadProgressText {
+            margin-top: 10px;
+            color: #666;
+            font-size: 14px;
+        }
+
         /* Custom Model Configuration Styling */
         #customModelConfig {
             background-color: #f8f9fa;
@@ -346,7 +388,16 @@
         <div id="extractStatus" class="status-message info">📄 Extracting text from PDF...</div>
         <div id="generateStatus" class="status-message info">⚙️ Generating MCQ questions...</div>
     </div>
-    
+
+    <!-- Upload Progress Bar -->
+    <div id="uploadProgressContainer">
+        <div id="uploadProgressLabel">📤 Uploading PDF...</div>
+        <div id="uploadProgressBar">
+            <div id="uploadProgressFill">0%</div>
+        </div>
+        <div id="uploadProgressText">0 MB / 0 MB</div>
+    </div>
+
     <div class="loader" id="loader"></div>
 
     <!-- Questions Section (appears first) -->
@@ -873,54 +924,89 @@
                     }
                 }
 
-                fetch(endpoint, {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => {
-                    showStatus(extractStatus);
-                    return response.json();
-                })
-                .then(data => {
-                    if (mode === 'generate') {
-                        showStatus(generateStatus);
+                // Use XMLHttpRequest for upload progress tracking
+                const xhr = new XMLHttpRequest();
+                const progressContainer = document.getElementById('uploadProgressContainer');
+                const progressFill = document.getElementById('uploadProgressFill');
+                const progressText = document.getElementById('uploadProgressText');
+
+                // Show progress bar
+                progressContainer.style.display = 'block';
+
+                // Track upload progress
+                xhr.upload.addEventListener('progress', function(e) {
+                    if (e.lengthComputable) {
+                        const percentComplete = (e.loaded / e.total) * 100;
+                        const uploadedMB = (e.loaded / (1024 * 1024)).toFixed(2);
+                        const totalMB = (e.total / (1024 * 1024)).toFixed(2);
+
+                        progressFill.style.width = percentComplete + '%';
+                        progressFill.textContent = Math.round(percentComplete) + '%';
+                        progressText.textContent = uploadedMB + ' MB / ' + totalMB + ' MB';
                     }
-                    if (data.error) throw new Error(data.error);
-                    return data;
-                })
-                .then(data => {
-                    // Hide loader and status messages
-                    loader.style.display = 'none';
-                    document.getElementById('statusMessages').style.display = 'none';
+                });
 
-                    if (mode === 'split') {
-                        // Handle split mode response
-                        displaySplitResults(data);
-                    } else {
-                        currentQuestions = data.questions;
+                xhr.addEventListener('load', function() {
+                    progressContainer.style.display = 'none';
 
-                        // Display summary if available
-                        if (data.summary) {
-                            if (mode === 'parse') {
-                                // For parse mode, show a simpler summary
-                                displayParseSummary(data.summary);
-                            } else {
-                                displaySummary(data.summary);
-                            }
+                    if (xhr.status === 200) {
+                        showStatus(extractStatus);
+                        const data = JSON.parse(xhr.responseText);
+
+                        if (data.error) {
+                            loader.style.display = 'none';
+                            document.getElementById('statusMessages').style.display = 'none';
+                            alert('An error occurred: ' + data.error);
+                            return;
                         }
 
-                        // Display questions
-                        displayQuestions(currentQuestions);
-                        resultContainer.style.display = 'block';
-                        downloadContainer.style.display = 'block';
+                        if (mode === 'generate') {
+                            showStatus(generateStatus);
+                        }
+
+                        // Hide loader and status messages
+                        loader.style.display = 'none';
+                        document.getElementById('statusMessages').style.display = 'none';
+
+                        if (mode === 'split') {
+                            // Handle split mode response
+                            displaySplitResults(data);
+                        } else {
+                            currentQuestions = data.questions;
+
+                            // Display summary if available
+                            if (data.summary) {
+                                if (mode === 'parse') {
+                                    // For parse mode, show a simpler summary
+                                    displayParseSummary(data.summary);
+                                } else {
+                                    displaySummary(data.summary);
+                                }
+                            }
+
+                            // Display questions
+                            displayQuestions(currentQuestions);
+                            resultContainer.style.display = 'block';
+                            downloadContainer.style.display = 'block';
+                        }
+                    } else {
+                        progressContainer.style.display = 'none';
+                        loader.style.display = 'none';
+                        document.getElementById('statusMessages').style.display = 'none';
+                        const data = JSON.parse(xhr.responseText);
+                        alert('An error occurred: ' + (data.error || 'Unknown error'));
                     }
-                })
-                .catch(error => {
+                });
+
+                xhr.addEventListener('error', function() {
+                    progressContainer.style.display = 'none';
                     loader.style.display = 'none';
                     document.getElementById('statusMessages').style.display = 'none';
-                    console.error('Error:', error);
-                    alert('An error occurred: ' + error.message);
+                    alert('An error occurred during upload. Please try again.');
                 });
+
+                xhr.open('POST', endpoint);
+                xhr.send(formData);
             }
         });
     </script>

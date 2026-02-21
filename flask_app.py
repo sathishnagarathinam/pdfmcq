@@ -46,7 +46,7 @@ else:
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 52428800  # 50MB max file size
+app.config['MAX_CONTENT_LENGTH'] = 524288000  # 500MB max file size (increased from 50MB)
 
 # Secret key for session management (loaded from .env)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fallback-dev-key-change-in-production')
