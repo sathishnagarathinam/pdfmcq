@@ -107,8 +107,9 @@ class LoginForm(FlaskForm):
     submit = SubmitField('Login')
 
 
-# Global variable to store current questions
+# Global variables to store current questions and PDF summary
 current_questions = None
+current_pdf_summary = None
 
 def cleanup_temp_files(file_path):
     """Safely cleanup temporary files"""
@@ -496,13 +497,17 @@ def upload_file():
 
         questions = result['questions']
         summary = result['summary']
+        pdf_summary = result.get('pdf_summary', 'Summary not available')
 
         # Store questions globally for download
         current_questions = questions
+        # Store PDF summary globally for CSV download
+        current_pdf_summary = pdf_summary
 
         return jsonify({
             'questions': questions,
             'summary': summary,
+            'pdf_summary': pdf_summary,
             'message': f'Successfully generated {len(questions)} MCQ questions',
             'text_length': len(extracted_text),
             'max_questions_estimate': max_questions,
@@ -522,13 +527,25 @@ def upload_file():
 @login_required
 def download_csv():
     try:
-        questions = request.json
+        data = request.json
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        # Handle both old format (direct questions array) and new format (with pdf_summary)
+        if isinstance(data, list):
+            questions = data
+            pdf_summary = None
+        else:
+            questions = data.get('questions', [])
+            pdf_summary = data.get('pdf_summary', None)
+
         if not questions:
             return jsonify({'error': 'No questions data provided'}), 400
-        
-        # Create DataFrame without metadata columns (as per user request)
-        df = pd.DataFrame([
-            {
+
+        # Create DataFrame with optional topic column
+        rows = []
+        for q in questions:
+            row = {
                 'question': q.get('text') if q.get('text') else (q.get('question') if q.get('question') else ''),  # Support both 'text' and 'question' keys
                 'option1': q['options'].get('A', ''),
                 'option2': q['options'].get('B', ''),
@@ -537,22 +554,27 @@ def download_csv():
                 'correct': {'A':'1', 'B':'2', 'C':'3', 'D':'4'}.get(q.get('correct', ''), ''),
                 'difficulty': q.get('difficulty', 'medium').capitalize(),
                 'explanation': q.get('explanation', '')
-            } for q in questions
-        ])
-        
+            }
+            # Add topic (PDF summary) as the last column
+            if pdf_summary:
+                row['topic'] = pdf_summary
+            rows.append(row)
+
+        df = pd.DataFrame(rows)
+
         # Create CSV in memory
         csv_buffer = BytesIO()
         csv_data = df.to_csv(index=False).encode('utf-8-sig')
         csv_buffer.write(csv_data)
         csv_buffer.seek(0)
-        
+
         return send_file(
             csv_buffer,
             mimetype='text/csv',
             as_attachment=True,
             download_name='mcq_questions.csv'
         )
-        
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

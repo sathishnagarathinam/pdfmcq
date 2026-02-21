@@ -421,6 +421,7 @@
     <!-- Update the script section by adding these functions -->
     <script>
         let currentQuestions = null;
+        let currentPdfSummary = null;
 
         // Model configurations
         const modelConfigs = {
@@ -730,13 +731,19 @@
     
         function downloadCSV() {
             if (!currentQuestions) return;
-            
+
+            // Prepare data with PDF summary
+            const csvData = {
+                questions: currentQuestions,
+                pdf_summary: currentPdfSummary
+            };
+
             fetch('/download-csv', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(currentQuestions)
+                body: JSON.stringify(csvData)
             })
             .then(response => response.blob())
             .then(blob => {
@@ -973,6 +980,7 @@
                             displaySplitResults(data);
                         } else {
                             currentQuestions = data.questions;
+                            currentPdfSummary = data.pdf_summary || null;
 
                             // Display summary if available
                             if (data.summary) {

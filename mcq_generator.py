@@ -149,6 +149,115 @@ def get_rate_limit_delay(model_name, chunk_number):
 
     return 0  # No delay for first chunk or unknown models
 
+def generate_pdf_summary(text, model_provider='openrouter', model_type='basic'):
+    """
+    Generate a 2-line summary of the PDF content to help users understand the subject.
+
+    Args:
+        text (str): Extracted text from PDF
+        model_provider (str): AI provider to use
+        model_type (str): Type of model to use
+
+    Returns:
+        str: 2-line summary of the PDF content
+    """
+    try:
+        if not text or len(text.strip()) < 50:
+            return "Unable to generate summary - insufficient content"
+
+        # Limit text to first 3000 characters for summary generation
+        summary_text = text[:3000]
+
+        client = get_ai_client(model_provider)
+        model = get_model_name(model_provider, model_type)
+
+        prompt = f"""Generate a concise 2-line summary of the following document content.
+The summary should help users understand the main subject and topic of the document.
+Keep it brief, informative, and in plain language.
+
+Document Content:
+{summary_text}
+
+Provide ONLY the 2-line summary, nothing else."""
+
+        completion = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant that creates concise document summaries."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=200,
+            temperature=0.5,
+        )
+
+        summary = completion.choices[0].message.content.strip()
+        return summary
+
+    except Exception as e:
+        print(f"⚠️  Error generating PDF summary: {e}")
+        return "Summary generation failed"
+
+def equalize_answer_lengths(question):
+    """
+    Equalize the length of answer options to prevent correct answer identification by length.
+
+    This function ensures that all answer options have similar lengths, making it harder
+    for users to identify the correct answer based on option length alone.
+
+    Args:
+        question (dict): Question with options A, B, C, D
+
+    Returns:
+        dict: Question with equalized option lengths
+    """
+    try:
+        if 'options' not in question:
+            return question
+
+        options = question['options']
+
+        # Get lengths of all options
+        lengths = {key: len(options.get(key, '')) for key in ['A', 'B', 'C', 'D']}
+
+        # Calculate target length (average of all options)
+        valid_lengths = [l for l in lengths.values() if l > 0]
+        if not valid_lengths:
+            return question
+
+        avg_length = sum(valid_lengths) / len(valid_lengths)
+        target_length = int(avg_length)
+
+        # Equalize each option
+        equalized_options = {}
+        for key in ['A', 'B', 'C', 'D']:
+            option_text = options.get(key, '')
+            current_length = len(option_text)
+
+            if current_length == 0:
+                equalized_options[key] = option_text
+            elif current_length > target_length:
+                # Truncate to target length, trying to cut at word boundary
+                truncated = option_text[:target_length]
+                # Try to find last space to avoid cutting mid-word
+                last_space = truncated.rfind(' ')
+                if last_space > target_length * 0.7:  # Only use space if it's not too early
+                    truncated = truncated[:last_space].rstrip()
+                equalized_options[key] = truncated
+            else:
+                # Pad with ellipsis or keep as is if close to target
+                if target_length - current_length <= 3:
+                    equalized_options[key] = option_text
+                else:
+                    # Add ellipsis to indicate truncation if needed
+                    equalized_options[key] = option_text
+
+        question['options'] = equalized_options
+        return question
+
+    except Exception as e:
+        print(f"⚠️  Error equalizing answer lengths: {e}")
+        return question
+
 def find_page_and_section_for_text(text_snippet, page_map, sections):
     """
     Finds which page(s) and section(s) a text snippet belongs to.
@@ -892,7 +1001,7 @@ def generate_mcq_questions(text, num_questions=5, model_provider='openrouter', m
 
                 DIFFICULTY DISTRIBUTION:
                    - 40% easy (direct rule-based facts)
-                   - 40% moderate (rule + condition combination)
+                   - 40% medium (rule + condition combination)
                    - 20% tricky (exceptions, notes, negative framing)
 
                 FORMAT REQUIREMENTS:
@@ -1023,7 +1132,7 @@ def generate_mcq_questions(text, num_questions=5, model_provider='openrouter', m
 
             DIFFICULTY DISTRIBUTION:
                - 40% easy (direct rule-based facts)
-               - 40% moderate (rule + condition combination)
+               - 40% medium (rule + condition combination)
                - 20% tricky (exceptions, notes, negative framing)
 
             FORMAT REQUIREMENTS:
@@ -1193,7 +1302,7 @@ def generate_mcq_questions_advanced(text, num_questions=5, difficulty='medium', 
 
                 DIFFICULTY DISTRIBUTION:
                    - 40% easy (direct rule-based facts)
-                   - 40% moderate (rule + condition combination)
+                   - 40% medium (rule + condition combination)
                    - 20% tricky (exceptions, notes, negative framing)
 
                 FORMAT REQUIREMENTS:
@@ -1308,7 +1417,7 @@ def generate_mcq_questions_advanced(text, num_questions=5, difficulty='medium', 
 
             DIFFICULTY DISTRIBUTION:
                - 40% easy (direct rule-based facts)
-               - 40% moderate (rule + condition combination)
+               - 40% medium (rule + condition combination)
                - 20% tricky (exceptions, notes, negative framing)
 
             FORMAT REQUIREMENTS:
@@ -1731,6 +1840,11 @@ def generate_mcq_questions_with_metadata(pdf_path, num_questions=5, difficulty='
         if isinstance(questions, str):
             return {'error': questions}
 
+        # Generate PDF summary
+        print("📋 Generating PDF summary...")
+        pdf_summary = generate_pdf_summary(text)
+        print(f"✅ PDF Summary: {pdf_summary}")
+
         # Add metadata to each question by analyzing the question text
         print("🏷️  Adding page and section metadata to questions...")
         for i, question in enumerate(questions):
@@ -1768,6 +1882,9 @@ def generate_mcq_questions_with_metadata(pdf_path, num_questions=5, difficulty='
             question['metadata'] = metadata
             question['question_number'] = i + 1
 
+            # Equalize answer lengths to prevent correct answer identification by length
+            question = equalize_answer_lengths(question)
+
         # Generate summary statistics
         summary = generate_question_distribution_summary(questions, page_map, sections, total_pages)
 
@@ -1776,7 +1893,8 @@ def generate_mcq_questions_with_metadata(pdf_path, num_questions=5, difficulty='
             'summary': summary,
             'page_map': page_map,
             'sections': sections,
-            'total_pages': total_pages
+            'total_pages': total_pages,
+            'pdf_summary': pdf_summary
         }
 
     except Exception as e:
