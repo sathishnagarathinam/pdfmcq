@@ -238,7 +238,10 @@
         <form id="uploadForm" enctype="multipart/form-data">
             <label for="pdfFile" style="font-weight: bold;">📄 Upload Base PDF Document:</label>
             <input type="file" id="pdfFile" name="pdfFile" accept=".pdf" required>
-            <br><br>
+            <p style="font-size: 0.85em; color: #d32f2f; margin: 10px 0;">
+                ⚠️ <strong>Production Limit:</strong> Maximum 6MB per upload on Vercel. For larger files, please use the local version or contact support.
+            </p>
+            <br>
 
             <!-- Amendment PDF Upload -->
             <div style="background-color: #fff3cd; padding: 15px; border-radius: 5px; margin: 15px 0;">
@@ -886,6 +889,22 @@
             }
 
             if (file) {
+                // Check file size - Vercel has a 6MB limit for serverless functions
+                const MAX_FILE_SIZE_PRODUCTION = 6 * 1024 * 1024; // 6MB for production (Vercel limit)
+                const MAX_FILE_SIZE_LOCAL = 500 * 1024 * 1024; // 500MB for local
+
+                // Detect if running on Vercel (production)
+                const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+                const maxFileSize = isProduction ? MAX_FILE_SIZE_PRODUCTION : MAX_FILE_SIZE_LOCAL;
+
+                if (file.size > maxFileSize) {
+                    const maxSizeMB = (maxFileSize / (1024 * 1024)).toFixed(1);
+                    const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
+                    const environment = isProduction ? 'production (Vercel)' : 'local';
+                    alert(`❌ File too large!\n\nYour file: ${fileSizeMB}MB\nMaximum allowed on ${environment}: ${maxSizeMB}MB\n\nPlease use a smaller PDF or try the local version for larger files.`);
+                    return;
+                }
+
                 // Reset display
                 loader.style.display = 'block';
                 resultContainer.style.display = 'none';
@@ -1001,8 +1020,18 @@
                         progressContainer.style.display = 'none';
                         loader.style.display = 'none';
                         document.getElementById('statusMessages').style.display = 'none';
-                        const data = JSON.parse(xhr.responseText);
-                        alert('An error occurred: ' + (data.error || 'Unknown error'));
+
+                        // Handle specific error codes
+                        if (xhr.status === 413) {
+                            alert('❌ File too large!\n\nThe file exceeds the maximum allowed size.\n\nProduction (Vercel): Maximum 6MB\nLocal: Maximum 500MB\n\nPlease use a smaller PDF or try the local version.');
+                        } else {
+                            try {
+                                const data = JSON.parse(xhr.responseText);
+                                alert('An error occurred: ' + (data.error || 'Unknown error'));
+                            } catch (e) {
+                                alert('An error occurred: ' + xhr.status + ' ' + xhr.statusText);
+                            }
+                        }
                     }
                 });
 
