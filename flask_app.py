@@ -547,9 +547,10 @@ def download_csv():
         if not questions:
             return jsonify({'error': 'No questions data provided'}), 400
 
-        # Create DataFrame with optional topic column
+        # Create DataFrame with l2 column (topic/summary)
+        # Topic is limited to 200 characters and only filled in the FIRST row
         rows = []
-        for q in questions:
+        for idx, q in enumerate(questions):
             row = {
                 'question': q.get('text') if q.get('text') else (q.get('question') if q.get('question') else ''),  # Support both 'text' and 'question' keys
                 'option1': q['options'].get('A', ''),
@@ -558,11 +559,12 @@ def download_csv():
                 'option4': q['options'].get('D', ''),
                 'correct': {'A':'1', 'B':'2', 'C':'3', 'D':'4'}.get(q.get('correct', ''), ''),
                 'difficulty': q.get('difficulty', 'medium').capitalize(),
-                'explanation': q.get('explanation', '')
+                'explanation': q.get('explanation', ''),
+                'l2': ''  # Initialize l2 column as empty for all rows
             }
-            # Add topic (PDF summary) as the last column
-            if pdf_summary:
-                row['topic'] = pdf_summary
+            # Add topic (PDF summary) to l2 column ONLY for the first row, limited to 200 characters
+            if pdf_summary and idx == 0:
+                row['l2'] = pdf_summary[:200] if len(pdf_summary) > 200 else pdf_summary
             rows.append(row)
 
         df = pd.DataFrame(rows)
