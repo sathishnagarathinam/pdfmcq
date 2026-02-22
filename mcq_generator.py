@@ -72,27 +72,26 @@ def get_model_token_limits(provider, model_name):
     Returns a tuple of (max_context_tokens, is_free_tier, rate_limit_info)
     """
     # Free tier models have much lower limits and rate limits
+    # Note: Free models on OpenRouter change frequently - some may become unavailable
     free_tier_models = {
-        # Reasoning Models (DeepSeek R1 Distill series)
-        'deepseek/deepseek-r1-distill-llama-70b:free': {'tokens': 8000, 'rate_limit': '20/min'},
-        'deepseek/deepseek-r1-distill-qwen-32b:free': {'tokens': 8000, 'rate_limit': '20/min'},
-        'deepseek/deepseek-r1-distill-qwen-14b:free': {'tokens': 8000, 'rate_limit': '20/min'},
+        # DeepSeek Models (Most Reliable)
+        'deepseek/deepseek-chat': {'tokens': 8000, 'rate_limit': '50/day'},  # DeepSeek V3 - Most reliable
 
-        # General Purpose Models
-        'deepseek/deepseek-chat': {'tokens': 8000, 'rate_limit': '50/day'},
-        'meta-llama/llama-3.1-70b-instruct:free': {'tokens': 8000, 'rate_limit': '20/min'},
+        # Meta Llama Models
         'meta-llama/llama-3.3-70b-instruct:free': {'tokens': 8000, 'rate_limit': '20/min'},
         'meta-llama/llama-3.1-8b-instruct:free': {'tokens': 8000, 'rate_limit': '20/min'},
 
-        # Specialized Models
-        'qwen/qwen-2.5-coder-32b-instruct:free': {'tokens': 8000, 'rate_limit': '20/min'},
+        # Qwen Models (only include stable ones)
         'qwen/qwen-2.5-72b-instruct:free': {'tokens': 8000, 'rate_limit': '20/min'},
-        'qwen/qwen-2.5-7b-instruct:free': {'tokens': 8000, 'rate_limit': '20/min'},
-        'microsoft/phi-3-medium-128k-instruct:free': {'tokens': 16000, 'rate_limit': '20/min'},  # Longer context
+
+        # Microsoft Phi
+        'microsoft/phi-3-medium-128k-instruct:free': {'tokens': 16000, 'rate_limit': '20/min'},
+
+        # Mistral
         'mistralai/mistral-7b-instruct:free': {'tokens': 8000, 'rate_limit': '20/min'},
 
-        # Limited Rate Models
-        'google/gemini-2.0-flash-exp:free': {'tokens': 6000, 'rate_limit': '4/min'},  # Very limited
+        # Google (Limited Rate)
+        'google/gemini-2.0-flash-exp:free': {'tokens': 6000, 'rate_limit': '4/min'},
     }
 
     # Check if it's a free tier model
@@ -127,15 +126,9 @@ def get_rate_limit_delay(model_name, chunk_number):
         'google/gemini-2.0-flash-exp:free': 15,  # 4 req/min = 15 sec between requests
 
         # Standard free tier models (20 req/min = 3 sec between requests)
-        'deepseek/deepseek-r1-distill-llama-70b:free': 3,
-        'deepseek/deepseek-r1-distill-qwen-32b:free': 3,
-        'deepseek/deepseek-r1-distill-qwen-14b:free': 3,
-        'meta-llama/llama-3.1-70b-instruct:free': 3,
         'meta-llama/llama-3.3-70b-instruct:free': 3,
         'meta-llama/llama-3.1-8b-instruct:free': 3,
-        'qwen/qwen-2.5-coder-32b-instruct:free': 3,
         'qwen/qwen-2.5-72b-instruct:free': 3,
-        'qwen/qwen-2.5-7b-instruct:free': 3,
         'microsoft/phi-3-medium-128k-instruct:free': 3,
         'mistralai/mistral-7b-instruct:free': 3,
 

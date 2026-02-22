@@ -434,23 +434,20 @@
         let currentPdfSummary = null;
 
         // Model configurations
+        // Note: Free models on OpenRouter change frequently - some may become unavailable
         const modelConfigs = {
             openrouter: [
-                // Reasoning Models (Best for complex tasks)
-                { value: 'deepseek/deepseek-r1-distill-llama-70b:free', text: 'DeepSeek R1 Distill Llama 70B (Free) - Best Reasoning' },
-                { value: 'deepseek/deepseek-r1-distill-qwen-32b:free', text: 'DeepSeek R1 Distill Qwen 32B (Free) - Good Reasoning' },
-                { value: 'deepseek/deepseek-r1-distill-qwen-14b:free', text: 'DeepSeek R1 Distill Qwen 14B (Free) - Fast Reasoning' },
+                // Most Reliable - DeepSeek V3 (Recommended)
+                { value: 'deepseek/deepseek-chat', text: '⭐ DeepSeek V3 - Most Reliable (Recommended)' },
 
-                // General Purpose Models
-                { value: 'deepseek/deepseek-chat', text: 'DeepSeek V3 - Excellent All-Round' },
-                { value: 'meta-llama/llama-3.1-70b-instruct:free', text: 'Llama 3.1 70B (Free) - High Quality' },
-                { value: 'meta-llama/llama-3.3-70b-instruct:free', text: 'Llama 3.3 70B (Free) - Latest' },
+                // Meta Llama Models (Stable)
+                { value: 'meta-llama/llama-3.3-70b-instruct:free', text: 'Llama 3.3 70B (Free) - High Quality' },
                 { value: 'meta-llama/llama-3.1-8b-instruct:free', text: 'Llama 3.1 8B (Free) - Very Fast' },
 
-                // Specialized Models
-                { value: 'qwen/qwen-2.5-coder-32b-instruct:free', text: 'Qwen 2.5 Coder 32B (Free) - Best for Code' },
+                // Qwen Models (Stable)
                 { value: 'qwen/qwen-2.5-72b-instruct:free', text: 'Qwen 2.5 72B (Free) - High Quality' },
-                { value: 'qwen/qwen-2.5-7b-instruct:free', text: 'Qwen 2.5 7B (Free) - Fast' },
+
+                // Other Free Models
                 { value: 'microsoft/phi-3-medium-128k-instruct:free', text: 'Phi-3 Medium 128K (Free) - Long Context' },
                 { value: 'mistralai/mistral-7b-instruct:free', text: 'Mistral 7B (Free) - Efficient' },
 
