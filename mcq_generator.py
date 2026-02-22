@@ -80,7 +80,7 @@ def get_model_token_limits(provider, model_name):
         'deepseek/deepseek-r1-0528:free': {'tokens': 8000, 'rate_limit': '20/min'},  # DeepSeek R1 reasoning
 
         # Arcee AI Models (Frontier)
-        'arcee-ai/arcee-blitz': {'tokens': 8000, 'rate_limit': '20/min'},  # Trinity Large Preview
+        'arcee-ai/trinity-large-preview:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Trinity Large Preview
         'arcee-ai/trinity-mini:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Trinity Mini
 
         # Meta Llama Models
@@ -153,7 +153,7 @@ def get_rate_limit_delay(model_name, chunk_number):
         'meta-llama/llama-3.3-70b-instruct:free': 3,
         'qwen/qwen3-235b-a22b-instruct:free': 3,
         'deepseek/deepseek-r1-0528:free': 3,
-        'arcee-ai/arcee-blitz': 3,
+        'arcee-ai/trinity-large-preview:free': 3,
         'arcee-ai/trinity-mini:free': 3,
         'nvidia/nemotron-nano-9b-v2:free': 2,  # 50 req/min
         'nvidia/nemotron-3-nano-30b-a3b:free': 3,
