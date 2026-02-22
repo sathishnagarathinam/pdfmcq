@@ -392,6 +392,13 @@
         <div id="generateStatus" class="status-message info">⚙️ Generating MCQ questions...</div>
     </div>
 
+    <!-- Real-time progress messages for streaming -->
+    <div id="progressStream" style="display: none; background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%); border-radius: 10px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+        <h3 style="margin: 0 0 15px 0; color: #333;">📊 Generation Progress</h3>
+        <div id="progressMessagesList" style="max-height: 300px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 14px;">
+        </div>
+    </div>
+
     <!-- Upload Progress Bar -->
     <div id="uploadProgressContainer">
         <div id="uploadProgressLabel">📤 Uploading PDF...</div>
@@ -922,6 +929,7 @@
 
                 // Determine endpoint and form data based on mode
                 let endpoint = '/upload';
+                let useStreaming = false;
 
                 if (mode === 'parse') {
                     endpoint = '/parse-mcq';
@@ -932,12 +940,15 @@
                     formData.append('pagesPerFile', document.getElementById('pagesPerFile').value);
                     formData.append('pageRanges', document.getElementById('pageRanges').value);
                 } else {
-                    // Generate mode
+                    // Generate mode - use streaming endpoint for real-time progress
+                    useStreaming = true;
+                    endpoint = '/upload-stream';
                     formData.append('questionCount', document.getElementById('questionCount').value);
                     formData.append('difficulty', document.getElementById('difficulty').value);
                     formData.append('modelProvider', document.getElementById('modelProvider').value);
                     formData.append('bookName', document.getElementById('bookName').value);
                     formData.append('chapterName', document.getElementById('chapterName').value);
+                    formData.append('useMaxQuestions', document.getElementById('useMaxQuestions').checked);
 
                     // Handle model selection
                     const provider = document.getElementById('modelProvider').value;
@@ -950,100 +961,198 @@
                     }
                 }
 
-                // Use XMLHttpRequest for upload progress tracking
-                const xhr = new XMLHttpRequest();
                 const progressContainer = document.getElementById('uploadProgressContainer');
                 const progressFill = document.getElementById('uploadProgressFill');
                 const progressText = document.getElementById('uploadProgressText');
+                const progressStream = document.getElementById('progressStream');
+                const progressMessagesList = document.getElementById('progressMessagesList');
 
-                // Show progress bar
-                progressContainer.style.display = 'block';
+                // Function to add progress message
+                function addProgressMessage(message, isError = false) {
+                    const msgDiv = document.createElement('div');
+                    msgDiv.style.padding = '8px 12px';
+                    msgDiv.style.marginBottom = '5px';
+                    msgDiv.style.borderRadius = '5px';
+                    msgDiv.style.backgroundColor = isError ? '#ffebee' : '#e8f5e9';
+                    msgDiv.style.borderLeft = `4px solid ${isError ? '#f44336' : '#4CAF50'}`;
+                    msgDiv.style.color = isError ? '#c62828' : '#2e7d32';
+                    msgDiv.textContent = message;
+                    progressMessagesList.appendChild(msgDiv);
+                    progressMessagesList.scrollTop = progressMessagesList.scrollHeight;
+                }
 
-                // Track upload progress
-                xhr.upload.addEventListener('progress', function(e) {
-                    if (e.lengthComputable) {
-                        const percentComplete = (e.loaded / e.total) * 100;
-                        const uploadedMB = (e.loaded / (1024 * 1024)).toFixed(2);
-                        const totalMB = (e.total / (1024 * 1024)).toFixed(2);
+                if (useStreaming) {
+                    // Use fetch with streaming for generate mode
+                    progressStream.style.display = 'block';
+                    progressMessagesList.innerHTML = '';
+                    addProgressMessage('🚀 Starting MCQ generation...');
 
-                        progressFill.style.width = percentComplete + '%';
-                        progressFill.textContent = Math.round(percentComplete) + '%';
-                        progressText.textContent = uploadedMB + ' MB / ' + totalMB + ' MB';
-                    }
-                });
+                    // Hide old status messages
+                    document.getElementById('statusMessages').style.display = 'none';
 
-                xhr.addEventListener('load', function() {
-                    progressContainer.style.display = 'none';
+                    fetch(endpoint, {
+                        method: 'POST',
+                        body: formData
+                    }).then(response => {
+                        const reader = response.body.getReader();
+                        const decoder = new TextDecoder();
 
-                    if (xhr.status === 200) {
-                        showStatus(extractStatus);
-                        const data = JSON.parse(xhr.responseText);
-
-                        if (data.error) {
-                            loader.style.display = 'none';
-                            document.getElementById('statusMessages').style.display = 'none';
-                            alert('An error occurred: ' + data.error);
-                            return;
-                        }
-
-                        if (mode === 'generate') {
-                            showStatus(generateStatus);
-                        }
-
-                        // Hide loader and status messages
-                        loader.style.display = 'none';
-                        document.getElementById('statusMessages').style.display = 'none';
-
-                        if (mode === 'split') {
-                            // Handle split mode response
-                            displaySplitResults(data);
-                        } else {
-                            currentQuestions = data.questions;
-                            currentPdfSummary = data.pdf_summary || null;
-
-                            // Display summary if available
-                            if (data.summary) {
-                                if (mode === 'parse') {
-                                    // For parse mode, show a simpler summary
-                                    displayParseSummary(data.summary);
-                                } else {
-                                    displaySummary(data.summary);
+                        function readStream() {
+                            reader.read().then(({done, value}) => {
+                                if (done) {
+                                    loader.style.display = 'none';
+                                    return;
                                 }
+
+                                const text = decoder.decode(value);
+                                const lines = text.split('\n');
+
+                                for (const line of lines) {
+                                    if (line.startsWith('data: ')) {
+                                        try {
+                                            const data = JSON.parse(line.substring(6));
+
+                                            if (data.status === 'progress') {
+                                                addProgressMessage(data.message);
+                                            } else if (data.status === 'error') {
+                                                addProgressMessage('❌ ' + data.message, true);
+                                                loader.style.display = 'none';
+                                                progressStream.style.display = 'none';
+                                                alert('An error occurred: ' + data.message);
+                                                return;
+                                            } else if (data.status === 'complete') {
+                                                addProgressMessage('🎉 ' + data.message);
+
+                                                // Hide progress and loader
+                                                loader.style.display = 'none';
+                                                setTimeout(() => {
+                                                    progressStream.style.display = 'none';
+                                                }, 2000);
+
+                                                // Store questions
+                                                currentQuestions = data.questions;
+                                                currentPdfSummary = data.pdf_summary || null;
+
+                                                // Display summary if available
+                                                if (data.summary) {
+                                                    displaySummary(data.summary);
+                                                }
+
+                                                // Display questions
+                                                displayQuestions(currentQuestions);
+                                                resultContainer.style.display = 'block';
+                                                downloadContainer.style.display = 'block';
+                                            }
+                                        } catch (e) {
+                                            console.log('Parse error:', e, 'Line:', line);
+                                        }
+                                    }
+                                }
+
+                                readStream();
+                            }).catch(err => {
+                                loader.style.display = 'none';
+                                progressStream.style.display = 'none';
+                                alert('Stream error: ' + err.message);
+                            });
+                        }
+
+                        readStream();
+                    }).catch(err => {
+                        loader.style.display = 'none';
+                        progressStream.style.display = 'none';
+                        addProgressMessage('❌ Error: ' + err.message, true);
+                        alert('An error occurred: ' + err.message);
+                    });
+                } else {
+                    // Use XMLHttpRequest for parse/split modes (no streaming needed)
+                    const xhr = new XMLHttpRequest();
+
+                    // Show progress bar
+                    progressContainer.style.display = 'block';
+
+                    // Track upload progress
+                    xhr.upload.addEventListener('progress', function(e) {
+                        if (e.lengthComputable) {
+                            const percentComplete = (e.loaded / e.total) * 100;
+                            const uploadedMB = (e.loaded / (1024 * 1024)).toFixed(2);
+                            const totalMB = (e.total / (1024 * 1024)).toFixed(2);
+
+                            progressFill.style.width = percentComplete + '%';
+                            progressFill.textContent = Math.round(percentComplete) + '%';
+                            progressText.textContent = uploadedMB + ' MB / ' + totalMB + ' MB';
+                        }
+                    });
+
+                    xhr.addEventListener('load', function() {
+                        progressContainer.style.display = 'none';
+
+                        if (xhr.status === 200) {
+                            showStatus(extractStatus);
+                            const data = JSON.parse(xhr.responseText);
+
+                            if (data.error) {
+                                loader.style.display = 'none';
+                                document.getElementById('statusMessages').style.display = 'none';
+                                alert('An error occurred: ' + data.error);
+                                return;
                             }
 
-                            // Display questions
-                            displayQuestions(currentQuestions);
-                            resultContainer.style.display = 'block';
-                            downloadContainer.style.display = 'block';
+                            // Hide loader and status messages
+                            loader.style.display = 'none';
+                            document.getElementById('statusMessages').style.display = 'none';
+
+                            if (mode === 'split') {
+                                // Handle split mode response
+                                displaySplitResults(data);
+                            } else {
+                                currentQuestions = data.questions;
+                                currentPdfSummary = data.pdf_summary || null;
+
+                                // Display summary if available
+                                if (data.summary) {
+                                    if (mode === 'parse') {
+                                        // For parse mode, show a simpler summary
+                                        displayParseSummary(data.summary);
+                                    } else {
+                                        displaySummary(data.summary);
+                                    }
+                                }
+
+                                // Display questions
+                                displayQuestions(currentQuestions);
+                                resultContainer.style.display = 'block';
+                                downloadContainer.style.display = 'block';
+                            }
+                        } else {
+                            progressContainer.style.display = 'none';
+                            loader.style.display = 'none';
+                            document.getElementById('statusMessages').style.display = 'none';
+
+                            // Handle specific error codes
+                            if (xhr.status === 413) {
+                                alert('❌ File too large!\n\nThe file exceeds the maximum allowed size.\n\nProduction (Vercel): Maximum 6MB\nLocal: Maximum 500MB\n\nPlease use a smaller PDF or try the local version.');
+                            } else {
+                                try {
+                                    const data = JSON.parse(xhr.responseText);
+                                    alert('An error occurred: ' + (data.error || 'Unknown error'));
+                                } catch (e) {
+                                    alert('An error occurred: ' + xhr.status + ' ' + xhr.statusText);
+                                }
+                            }
                         }
-                    } else {
+                    });
+
+                    xhr.addEventListener('error', function() {
                         progressContainer.style.display = 'none';
                         loader.style.display = 'none';
                         document.getElementById('statusMessages').style.display = 'none';
+                        alert('An error occurred during upload. Please try again.');
+                    });
 
-                        // Handle specific error codes
-                        if (xhr.status === 413) {
-                            alert('❌ File too large!\n\nThe file exceeds the maximum allowed size.\n\nProduction (Vercel): Maximum 6MB\nLocal: Maximum 500MB\n\nPlease use a smaller PDF or try the local version.');
-                        } else {
-                            try {
-                                const data = JSON.parse(xhr.responseText);
-                                alert('An error occurred: ' + (data.error || 'Unknown error'));
-                            } catch (e) {
-                                alert('An error occurred: ' + xhr.status + ' ' + xhr.statusText);
-                            }
-                        }
-                    }
-                });
-
-                xhr.addEventListener('error', function() {
-                    progressContainer.style.display = 'none';
-                    loader.style.display = 'none';
-                    document.getElementById('statusMessages').style.display = 'none';
-                    alert('An error occurred during upload. Please try again.');
-                });
-
-                xhr.open('POST', endpoint);
-                xhr.send(formData);
+                    xhr.open('POST', endpoint);
+                    xhr.send(formData);
+                }
             }
         });
     </script>

@@ -1227,6 +1227,11 @@ def generate_mcq_questions_advanced(text, num_questions=5, difficulty='medium', 
         chapter_name = model_config.get('chapter_name', '').strip()
         use_amendment = model_config.get('use_amendment', False)
 
+        print(f"🚀 Starting advanced generation with provider: {provider}")
+        print(f"🤖 Model selected: {model_name}")
+        print(f"📝 Text length: {len(text)} characters")
+        print(f"🎯 Questions requested: {num_questions}")
+
         # Get AI client with custom configuration
         client = get_ai_client(provider, custom_api_key, custom_base_url)
 
@@ -1439,6 +1444,8 @@ def generate_mcq_questions_advanced(text, num_questions=5, difficulty='medium', 
             Text: {text}
             """
 
+            print(f"📤 Sending API request to model: {model_name}")
+
             completion = client.chat.completions.create(
                 model=model_name,
                 messages=[
@@ -1449,6 +1456,7 @@ def generate_mcq_questions_advanced(text, num_questions=5, difficulty='medium', 
                 temperature=0.7,
             )
 
+            print(f"✅ API response received from {model_name}")
             response = completion.choices[0].message.content.strip()
 
             # Clean up response if it contains markdown formatting
@@ -1458,10 +1466,27 @@ def generate_mcq_questions_advanced(text, num_questions=5, difficulty='medium', 
                 response = response[:-3]
             response = response.strip()
 
-            return json.loads(response)
+            # Also handle markdown with just "json" (some models)
+            if response.startswith('```'):
+                # Find the end of the first line
+                first_newline = response.find('\n')
+                if first_newline != -1:
+                    response = response[first_newline+1:]
+                if response.endswith('```'):
+                    response = response[:-3]
+                response = response.strip()
 
+            parsed_response = json.loads(response)
+            print(f"✅ Successfully parsed {len(parsed_response) if isinstance(parsed_response, list) else 1} questions from {model_name}")
+            return parsed_response
+
+    except json.JSONDecodeError as json_error:
+        print(f"❌ JSON parsing error with model {model_name}: {json_error}")
+        print(f"📄 Raw response: {response[:500] if 'response' in locals() else 'No response'}")
+        return f"Error parsing AI response from {model_name}: {json_error}"
     except Exception as e:
-        return f"Error generating questions: {e}"
+        print(f"❌ Error with model {model_name}: {type(e).__name__}: {e}")
+        return f"Error generating questions with {model_name}: {e}"
 
 
 def generate_mcq_questions_with_offline_fallback(text, num_questions=5, difficulty='medium',

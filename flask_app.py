@@ -1,7 +1,9 @@
-from flask import Flask, render_template, request, jsonify, send_file, redirect, url_for, flash
+from flask import Flask, render_template, request, jsonify, send_file, redirect, url_for, flash, Response
 import os
 import json
 import sys
+import queue
+import threading
 
 from mcq_generator import (
     extract_text_from_pdf, generate_mcq_questions, generate_mcq_questions_advanced,
@@ -9,6 +11,9 @@ from mcq_generator import (
     generate_mcq_questions_with_offline_fallback, get_generation_capabilities,
     generate_mcq_questions_with_metadata
 )
+
+# Global progress queue for SSE (used for real-time progress updates)
+progress_queues = {}
 
 from mcq_parser import parse_mcq_pdf, debug_pdf_content
 
@@ -577,6 +582,168 @@ def download_csv():
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/upload-stream', methods=['POST'])
+@csrf.exempt
+@login_required
+def upload_stream():
+    """
+    Streaming upload endpoint that returns real-time progress updates via Server-Sent Events.
+    This endpoint provides detailed progress messages during question generation.
+    """
+    # Generate unique session ID for this upload
+    session_id = str(uuid.uuid4())
+
+    # Create a progress queue for this session
+    progress_queue = queue.Queue()
+    progress_queues[session_id] = progress_queue
+
+    def send_progress(message, status='progress', data=None):
+        """Send progress update to the queue."""
+        event_data = {'message': message, 'status': status}
+        if data:
+            event_data.update(data)
+        progress_queue.put(json.dumps(event_data))
+
+    def generate():
+        """Generator function for SSE stream."""
+        try:
+            # Get form data
+            file = request.files.get('pdfFile')
+            if not file or file.filename == '':
+                yield f"data: {json.dumps({'status': 'error', 'message': 'No PDF file provided'})}\n\n"
+                return
+
+            # Parse form parameters
+            question_count = int(request.form.get('questionCount', 5))
+            difficulty = request.form.get('difficulty', 'medium')
+            model_provider = request.form.get('modelProvider', 'openrouter')
+            model_name = request.form.get('modelName', 'deepseek/deepseek-chat')
+            custom_api_key = request.form.get('customApiKey', '')
+            custom_base_url = request.form.get('customBaseUrl', '')
+            use_max_questions = request.form.get('useMaxQuestions', 'false').lower() == 'true'
+            book_name = request.form.get('bookName', '')
+            chapter_name = request.form.get('chapterName', '')
+            prefer_offline = request.form.get('preferOffline', 'false').lower() == 'true'
+            use_offline_estimation = request.form.get('useOfflineEstimation', 'false').lower() == 'true'
+            use_amendment = request.form.get('useAmendment', 'false').lower() == 'true'
+
+            yield f"data: {json.dumps({'status': 'progress', 'message': '📤 File received, starting processing...'})}\n\n"
+
+            # Handle amendment PDF if provided
+            amendment_text = None
+            amendment_temp_path = None
+            if use_amendment and 'amendmentPdfFile' in request.files:
+                amendment_file = request.files['amendmentPdfFile']
+                if amendment_file and amendment_file.filename != '':
+                    yield f"data: {json.dumps({'status': 'progress', 'message': '📝 Processing amendment PDF...'})}\n\n"
+                    amendment_temp_path = os.path.join(app.config['UPLOAD_FOLDER'], f"amendment_{amendment_file.filename}")
+                    amendment_file.save(amendment_temp_path)
+                    amendment_text = extract_text_from_pdf(amendment_temp_path)
+
+            # Save main PDF
+            yield f"data: {json.dumps({'status': 'progress', 'message': '💾 Saving PDF file...'})}\n\n"
+            temp_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+            file.save(temp_path)
+
+            # Extract text
+            yield f"data: {json.dumps({'status': 'progress', 'message': '📄 Extracting text from PDF with page tracking...'})}\n\n"
+            extracted_text = extract_text_from_pdf(temp_path)
+
+            # Check for extraction errors
+            is_error = (isinstance(extracted_text, str) and
+                       (extracted_text.startswith('Error') or extracted_text.startswith('PDF') or
+                        extracted_text.startswith('Failed') or extracted_text.startswith('No text')))
+
+            if is_error:
+                cleanup_temp_files(temp_path)
+                cleanup_temp_files(amendment_temp_path)
+                yield f"data: {json.dumps({'status': 'error', 'message': extracted_text})}\n\n"
+                return
+
+            yield f"data: {json.dumps({'status': 'progress', 'message': f'📊 Extracted {len(extracted_text)} characters from PDF'})}\n\n"
+
+            # Estimate questions
+            if use_offline_estimation:
+                yield f"data: {json.dumps({'status': 'progress', 'message': '🔢 Estimating optimal question count...'})}\n\n"
+                estimation_result = estimate_max_questions_detailed(extracted_text)
+                max_questions = estimation_result["max_questions"]
+            else:
+                max_questions = estimate_max_questions(extracted_text, use_offline=False)
+
+            questions_to_generate = max_questions if use_max_questions else question_count
+
+            yield f"data: {json.dumps({'status': 'progress', 'message': f'🎯 Will generate {questions_to_generate} questions ({difficulty} difficulty)'})}\n\n"
+
+            # Prepare model configuration
+            model_config = {
+                'provider': model_provider,
+                'model_name': model_name,
+                'custom_api_key': custom_api_key,
+                'custom_base_url': custom_base_url,
+                'book_name': book_name,
+                'chapter_name': chapter_name,
+                'use_amendment': use_amendment,
+                'amendment_text': amendment_text if use_amendment else None
+            }
+
+            yield f"data: {json.dumps({'status': 'progress', 'message': f'🤖 Using model: {model_name}'})}\n\n"
+            yield f"data: {json.dumps({'status': 'progress', 'message': '⚙️ Generating MCQ questions with AI...'})}\n\n"
+
+            # Generate questions
+            result = generate_mcq_questions_with_metadata(
+                pdf_path=temp_path,
+                num_questions=questions_to_generate,
+                difficulty=difficulty,
+                book_name=book_name,
+                chapter_name=chapter_name,
+                prefer_offline=prefer_offline,
+                model_config=model_config
+            )
+
+            # Cleanup temp files
+            cleanup_temp_files(temp_path)
+            cleanup_temp_files(amendment_temp_path)
+
+            # Check for errors
+            if 'error' in result:
+                yield f"data: {json.dumps({'status': 'error', 'message': result['error']})}\n\n"
+                return
+
+            questions = result['questions']
+            summary = result['summary']
+            pdf_summary = result.get('pdf_summary', 'Summary not available')
+
+            yield f"data: {json.dumps({'status': 'progress', 'message': f'✅ Generated {len(questions)} questions successfully!'})}\n\n"
+            yield f"data: {json.dumps({'status': 'progress', 'message': '📋 Adding page and section metadata...'})}\n\n"
+
+            # Send final result
+            final_result = {
+                'status': 'complete',
+                'message': f'Successfully generated {len(questions)} MCQ questions',
+                'questions': questions,
+                'summary': summary,
+                'pdf_summary': pdf_summary,
+                'text_length': len(extracted_text),
+                'max_questions_estimate': max_questions,
+                'questions_generated': len(questions),
+                'total_pages': result.get('total_pages', 0),
+                'sections_detected': len(result.get('sections', []))
+            }
+            yield f"data: {json.dumps(final_result)}\n\n"
+
+        except Exception as e:
+            yield f"data: {json.dumps({'status': 'error', 'message': str(e)})}\n\n"
+        finally:
+            # Cleanup progress queue
+            if session_id in progress_queues:
+                del progress_queues[session_id]
+
+    return Response(generate(), mimetype='text/event-stream', headers={
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no'
+    })
 
 @app.route('/download-pdf', methods=['POST'])
 @csrf.exempt
