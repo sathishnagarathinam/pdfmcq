@@ -598,6 +598,43 @@ def upload_stream():
     progress_queue = queue.Queue()
     progress_queues[session_id] = progress_queue
 
+    # IMPORTANT: Extract ALL request data BEFORE the generator function
+    # This is because the request context is not available inside the generator
+    file = request.files.get('pdfFile')
+    if not file or file.filename == '':
+        return Response(
+            f"data: {json.dumps({'status': 'error', 'message': 'No PDF file provided'})}\n\n",
+            mimetype='text/event-stream'
+        )
+
+    # Parse form parameters (must be done before generator)
+    question_count = int(request.form.get('questionCount', 5))
+    difficulty = request.form.get('difficulty', 'medium')
+    model_provider = request.form.get('modelProvider', 'openrouter')
+    model_name = request.form.get('modelName', 'deepseek/deepseek-chat')
+    custom_api_key = request.form.get('customApiKey', '')
+    custom_base_url = request.form.get('customBaseUrl', '')
+    use_max_questions = request.form.get('useMaxQuestions', 'false').lower() == 'true'
+    book_name = request.form.get('bookName', '')
+    chapter_name = request.form.get('chapterName', '')
+    prefer_offline = request.form.get('preferOffline', 'false').lower() == 'true'
+    use_offline_estimation = request.form.get('useOfflineEstimation', 'false').lower() == 'true'
+    use_amendment = request.form.get('useAmendment', 'false').lower() == 'true'
+
+    # Handle amendment PDF if provided (must be done before generator)
+    amendment_text = None
+    amendment_temp_path = None
+    if use_amendment and 'amendmentPdfFile' in request.files:
+        amendment_file = request.files['amendmentPdfFile']
+        if amendment_file and amendment_file.filename != '':
+            amendment_temp_path = os.path.join(app.config['UPLOAD_FOLDER'], f"amendment_{amendment_file.filename}")
+            amendment_file.save(amendment_temp_path)
+            amendment_text = extract_text_from_pdf(amendment_temp_path)
+
+    # Save main PDF (must be done before generator)
+    temp_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+    file.save(temp_path)
+
     def send_progress(message, status='progress', data=None):
         """Send progress update to the queue."""
         event_data = {'message': message, 'status': status}
@@ -608,43 +645,10 @@ def upload_stream():
     def generate():
         """Generator function for SSE stream."""
         try:
-            # Get form data
-            file = request.files.get('pdfFile')
-            if not file or file.filename == '':
-                yield f"data: {json.dumps({'status': 'error', 'message': 'No PDF file provided'})}\n\n"
-                return
+            yield f"data: {json.dumps({'status': 'progress', 'message': '� File received, starting processing...'})}\n\n"
 
-            # Parse form parameters
-            question_count = int(request.form.get('questionCount', 5))
-            difficulty = request.form.get('difficulty', 'medium')
-            model_provider = request.form.get('modelProvider', 'openrouter')
-            model_name = request.form.get('modelName', 'deepseek/deepseek-chat')
-            custom_api_key = request.form.get('customApiKey', '')
-            custom_base_url = request.form.get('customBaseUrl', '')
-            use_max_questions = request.form.get('useMaxQuestions', 'false').lower() == 'true'
-            book_name = request.form.get('bookName', '')
-            chapter_name = request.form.get('chapterName', '')
-            prefer_offline = request.form.get('preferOffline', 'false').lower() == 'true'
-            use_offline_estimation = request.form.get('useOfflineEstimation', 'false').lower() == 'true'
-            use_amendment = request.form.get('useAmendment', 'false').lower() == 'true'
-
-            yield f"data: {json.dumps({'status': 'progress', 'message': '📤 File received, starting processing...'})}\n\n"
-
-            # Handle amendment PDF if provided
-            amendment_text = None
-            amendment_temp_path = None
-            if use_amendment and 'amendmentPdfFile' in request.files:
-                amendment_file = request.files['amendmentPdfFile']
-                if amendment_file and amendment_file.filename != '':
-                    yield f"data: {json.dumps({'status': 'progress', 'message': '📝 Processing amendment PDF...'})}\n\n"
-                    amendment_temp_path = os.path.join(app.config['UPLOAD_FOLDER'], f"amendment_{amendment_file.filename}")
-                    amendment_file.save(amendment_temp_path)
-                    amendment_text = extract_text_from_pdf(amendment_temp_path)
-
-            # Save main PDF
-            yield f"data: {json.dumps({'status': 'progress', 'message': '💾 Saving PDF file...'})}\n\n"
-            temp_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-            file.save(temp_path)
+            if amendment_text:
+                yield f"data: {json.dumps({'status': 'progress', 'message': '📝 Amendment PDF processed'})}\n\n"
 
             # Extract text
             yield f"data: {json.dumps({'status': 'progress', 'message': '📄 Extracting text from PDF with page tracking...'})}\n\n"
