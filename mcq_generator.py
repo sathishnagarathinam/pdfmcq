@@ -73,16 +73,39 @@ def get_model_token_limits(provider, model_name):
     """
     # Free tier models have much lower limits and rate limits
     # Note: Free models on OpenRouter change frequently - some may become unavailable
+    # Updated: Feb 2026 based on OpenRouter free models collection
     free_tier_models = {
         # DeepSeek Models (Most Reliable)
         'deepseek/deepseek-chat': {'tokens': 8000, 'rate_limit': '50/day'},  # DeepSeek V3 - Most reliable
+        'deepseek/deepseek-r1-0528:free': {'tokens': 8000, 'rate_limit': '20/min'},  # DeepSeek R1 reasoning
+
+        # Arcee AI Models (Frontier)
+        'arcee-ai/arcee-blitz': {'tokens': 8000, 'rate_limit': '20/min'},  # Trinity Large Preview
+        'arcee-ai/trinity-mini:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Trinity Mini
 
         # Meta Llama Models
         'meta-llama/llama-3.3-70b-instruct:free': {'tokens': 8000, 'rate_limit': '20/min'},
-        'meta-llama/llama-3.1-8b-instruct:free': {'tokens': 8000, 'rate_limit': '20/min'},
 
-        # Qwen Models (only include stable ones)
-        'qwen/qwen-2.5-72b-instruct:free': {'tokens': 8000, 'rate_limit': '20/min'},
+        # Qwen Models
+        'qwen/qwen3-235b-a22b-instruct:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Qwen3 235B
+        'qwen/qwen3-coder:free': {'tokens': 8000, 'rate_limit': '8/min'},  # Qwen3 Coder 480B
+
+        # NVIDIA Models
+        'nvidia/nemotron-nano-9b-v2:free': {'tokens': 8000, 'rate_limit': '50/min'},  # Nemotron Nano 9B
+        'nvidia/nemotron-3-nano-30b-a3b:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Nemotron 3 Nano
+
+        # OpenAI Open Source
+        'openai/gpt-oss-20b:free': {'tokens': 8000, 'rate_limit': '20/min'},  # GPT OSS 20B
+        'openai/gpt-oss-120b:free': {'tokens': 8000, 'rate_limit': '20/min'},  # GPT OSS 120B
+
+        # StepFun
+        'stepfun/step-3.5-flash:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Step 3.5 Flash
+
+        # Z.ai
+        'z-ai/glm-4.5-air:free': {'tokens': 8000, 'rate_limit': '20/min'},  # GLM 4.5 Air
+
+        # Upstage
+        'upstage/solar-pro-3:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Solar Pro 3
 
         # Microsoft Phi
         'microsoft/phi-3-medium-128k-instruct:free': {'tokens': 16000, 'rate_limit': '20/min'},
@@ -124,11 +147,21 @@ def get_rate_limit_delay(model_name, chunk_number):
     rate_limit_delays = {
         # Very limited models
         'google/gemini-2.0-flash-exp:free': 15,  # 4 req/min = 15 sec between requests
+        'qwen/qwen3-coder:free': 8,  # 8 req/min = 8 sec between requests
 
         # Standard free tier models (20 req/min = 3 sec between requests)
         'meta-llama/llama-3.3-70b-instruct:free': 3,
-        'meta-llama/llama-3.1-8b-instruct:free': 3,
-        'qwen/qwen-2.5-72b-instruct:free': 3,
+        'qwen/qwen3-235b-a22b-instruct:free': 3,
+        'deepseek/deepseek-r1-0528:free': 3,
+        'arcee-ai/arcee-blitz': 3,
+        'arcee-ai/trinity-mini:free': 3,
+        'nvidia/nemotron-nano-9b-v2:free': 2,  # 50 req/min
+        'nvidia/nemotron-3-nano-30b-a3b:free': 3,
+        'openai/gpt-oss-20b:free': 3,
+        'openai/gpt-oss-120b:free': 3,
+        'stepfun/step-3.5-flash:free': 3,
+        'z-ai/glm-4.5-air:free': 3,
+        'upstage/solar-pro-3:free': 3,
         'microsoft/phi-3-medium-128k-instruct:free': 3,
         'mistralai/mistral-7b-instruct:free': 3,
 
