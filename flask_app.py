@@ -9,7 +9,7 @@ from mcq_generator import (
     extract_text_from_pdf, generate_mcq_questions, generate_mcq_questions_advanced,
     estimate_max_questions, estimate_max_questions_detailed,
     generate_mcq_questions_with_offline_fallback, get_generation_capabilities,
-    generate_mcq_questions_with_metadata
+    generate_mcq_questions_with_metadata, generate_pdf_summary
 )
 
 # Global progress queue for SSE (used for real-time progress updates)
@@ -1197,6 +1197,78 @@ def download_split_pdf(session_id, filename):
     except Exception as e:
         print(f"Error downloading split PDF: {e}")
         return jsonify({'error': f'Error downloading file: {str(e)}'}), 500
+
+
+@app.route('/summarize-pdf', methods=['POST'])
+@csrf.exempt
+@login_required
+def summarize_pdf():
+    """Generate a summary of the uploaded PDF content"""
+    if 'pdfFile' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+
+    file = request.files['pdfFile']
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+
+    # Get model settings
+    model_provider = request.form.get('modelProvider', 'openrouter')
+    model_type = request.form.get('modelType', 'deepseek/deepseek-chat')
+
+    # Save file temporarily
+    temp_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    file.save(temp_path)
+
+    try:
+        # Extract text from PDF
+        print(f"📄 Processing PDF for summary: {file.filename}")
+        extracted_text = extract_text_from_pdf(temp_path)
+
+        if not extracted_text or len(extracted_text.strip()) < 100:
+            return jsonify({'error': 'Could not extract sufficient text from PDF'}), 400
+
+        # Get total pages
+        from PyPDF2 import PdfReader
+        reader = PdfReader(temp_path)
+        total_pages = len(reader.pages)
+
+        print(f"📊 Extracted {len(extracted_text)} characters from {total_pages} pages")
+        print(f"🤖 Generating summary with model: {model_type}")
+
+        # Generate summary using the AI model
+        summary = generate_pdf_summary(
+            text=extracted_text,
+            model_provider=model_provider,
+            model_type=model_type
+        )
+
+        if not summary:
+            return jsonify({'error': 'Failed to generate summary'}), 500
+
+        print(f"✅ Summary generated: {summary[:100]}...")
+
+        return jsonify({
+            'success': True,
+            'summary': summary,
+            'filename': file.filename,
+            'total_pages': total_pages,
+            'text_length': len(extracted_text),
+            'model_used': model_type
+        }), 200
+
+    except Exception as e:
+        print(f"Error generating summary: {e}")
+        import traceback
+        return jsonify({
+            'error': f'Error generating summary: {str(e)}',
+            'traceback': traceback.format_exc()
+        }), 500
+
+    finally:
+        # Clean up temporary file
+        if os.path.exists(temp_path):
+            cleanup_temp_files(temp_path)
 
 
 # For Vercel deployment - this must be at module level

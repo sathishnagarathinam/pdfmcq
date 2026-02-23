@@ -228,9 +228,13 @@
             <input type="radio" name="mode" value="parse" onchange="switchMode('parse')">
             📋 Parse Existing MCQ PDF
         </label>
-        <label style="font-weight: bold;">
+        <label style="font-weight: bold; margin-right: 20px;">
             <input type="radio" name="mode" value="split" onchange="switchMode('split')">
             ✂️ Split PDF File
+        </label>
+        <label style="font-weight: bold;">
+            <input type="radio" name="mode" value="summarize" onchange="switchMode('summarize')">
+            📝 Summarize PDF
         </label>
     </div>
 
@@ -383,6 +387,33 @@
         <div id="splitFilesContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; margin: 15px 0;">
             <!-- Split files will be listed here -->
         </div>
+    </div>
+
+    <!-- PDF Summary Results Section -->
+    <div id="summaryResultContainer" style="display: none;">
+        <h2>📝 PDF Summary:</h2>
+        <div style="background-color: #e3f2fd; padding: 20px; border-radius: 8px; margin: 15px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <div style="background-color: #fff; padding: 20px; border-radius: 5px; border-left: 4px solid #1976d2;">
+                <p id="summaryText" style="font-size: 1.15em; line-height: 1.8; color: #333; margin: 0;"></p>
+            </div>
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #90caf9;">
+                <p style="color: #666; font-size: 0.9em; margin: 5px 0;">
+                    <strong>📄 Filename:</strong> <span id="summaryFilename"></span>
+                </p>
+                <p style="color: #666; font-size: 0.9em; margin: 5px 0;">
+                    <strong>📖 Total Pages:</strong> <span id="summaryTotalPages"></span>
+                </p>
+                <p style="color: #666; font-size: 0.9em; margin: 5px 0;">
+                    <strong>📊 Text Length:</strong> <span id="summaryTextLength"></span> characters
+                </p>
+                <p style="color: #666; font-size: 0.9em; margin: 5px 0;">
+                    <strong>🤖 Model Used:</strong> <span id="summaryModelUsed"></span>
+                </p>
+            </div>
+        </div>
+        <button onclick="copySummary()" style="background-color: #1976d2; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 1em;">
+            📋 Copy Summary
+        </button>
     </div>
 
     <!-- Add status messages before the loader -->
@@ -540,8 +571,15 @@
             } else if (mode === 'split') {
                 generateSection.style.display = 'none';
                 parseSection.style.display = 'none';
-                splitSection.style.display = 'block';
+                splitSection.style.display = 'none';
                 submitButton.textContent = 'Split PDF';
+                useAmendment.parentElement.parentElement.style.display = 'none';
+                splitSection.style.display = 'block';
+            } else if (mode === 'summarize') {
+                generateSection.style.display = 'none';
+                parseSection.style.display = 'none';
+                splitSection.style.display = 'none';
+                submitButton.textContent = 'Generate Summary';
                 useAmendment.parentElement.parentElement.style.display = 'none';
             }
         }
@@ -882,6 +920,35 @@
             splitResultContainer.style.display = 'block';
         }
 
+        function displaySummaryResults(data) {
+            const summaryResultContainer = document.getElementById('summaryResultContainer');
+            const summaryText = document.getElementById('summaryText');
+            const summaryFilename = document.getElementById('summaryFilename');
+            const summaryTotalPages = document.getElementById('summaryTotalPages');
+            const summaryTextLength = document.getElementById('summaryTextLength');
+            const summaryModelUsed = document.getElementById('summaryModelUsed');
+
+            // Update summary information
+            summaryText.textContent = data.summary;
+            summaryFilename.textContent = data.filename;
+            summaryTotalPages.textContent = data.total_pages;
+            summaryTextLength.textContent = data.text_length.toLocaleString();
+            summaryModelUsed.textContent = data.model_used;
+
+            // Show the results container
+            summaryResultContainer.style.display = 'block';
+        }
+
+        function copySummary() {
+            const summaryText = document.getElementById('summaryText').textContent;
+            navigator.clipboard.writeText(summaryText).then(function() {
+                alert('Summary copied to clipboard!');
+            }).catch(function(err) {
+                console.error('Failed to copy: ', err);
+                alert('Failed to copy summary. Please select and copy manually.');
+            });
+        }
+
         document.getElementById('uploadForm').addEventListener('submit', function(e) {
             e.preventDefault();
             const fileInput = document.getElementById('pdfFile');
@@ -932,6 +999,7 @@
                 summaryContainer.style.display = 'none';
                 downloadContainer.style.display = 'none';
                 document.getElementById('splitResultContainer').style.display = 'none';
+                document.getElementById('summaryResultContainer').style.display = 'none';
                 questionsOutput.innerHTML = '';
                 summaryOutput.innerHTML = '';
 
@@ -953,6 +1021,16 @@
                     formData.append('splitMode', document.getElementById('splitMode').value);
                     formData.append('pagesPerFile', document.getElementById('pagesPerFile').value);
                     formData.append('pageRanges', document.getElementById('pageRanges').value);
+                } else if (mode === 'summarize') {
+                    endpoint = '/summarize-pdf';
+                    formData.append('modelProvider', document.getElementById('modelProvider').value);
+                    // Use DeepSeek V3 by default for summarization (reliable free model)
+                    const provider = document.getElementById('modelProvider').value;
+                    if (provider === 'openrouter') {
+                        formData.append('modelType', 'deepseek/deepseek-chat');
+                    } else {
+                        formData.append('modelType', document.getElementById('modelSelect').value || 'deepseek/deepseek-chat');
+                    }
                 } else {
                     // Generate mode - use streaming endpoint for real-time progress
                     useStreaming = true;
@@ -1119,6 +1197,9 @@
                             if (mode === 'split') {
                                 // Handle split mode response
                                 displaySplitResults(data);
+                            } else if (mode === 'summarize') {
+                                // Handle summarize mode response
+                                displaySummaryResults(data);
                             } else {
                                 currentQuestions = data.questions;
                                 currentPdfSummary = data.pdf_summary || null;
