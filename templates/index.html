@@ -234,7 +234,7 @@
         </label>
         <label style="font-weight: bold;">
             <input type="radio" name="mode" value="summarize" onchange="switchMode('summarize')">
-            📝 Summarize PDF
+            📝 Generate Notes
         </label>
     </div>
 
@@ -391,29 +391,32 @@
 
     <!-- PDF Summary Results Section -->
     <div id="summaryResultContainer" style="display: none;">
-        <h2>📝 PDF Summary:</h2>
-        <div style="background-color: #e3f2fd; padding: 20px; border-radius: 8px; margin: 15px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-            <div style="background-color: #fff; padding: 20px; border-radius: 5px; border-left: 4px solid #1976d2;">
-                <p id="summaryText" style="font-size: 1.15em; line-height: 1.8; color: #333; margin: 0;"></p>
-            </div>
-            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #90caf9;">
-                <p style="color: #666; font-size: 0.9em; margin: 5px 0;">
-                    <strong>📄 Filename:</strong> <span id="summaryFilename"></span>
+        <h2>📝 Comprehensive Academic Notes:</h2>
+        <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <div style="margin-bottom: 15px; padding: 10px; background-color: #e3f2fd; border-radius: 5px;">
+                <p style="color: #666; font-size: 0.9em; margin: 5px 0; display: inline-block; margin-right: 20px;">
+                    <strong>📄 File:</strong> <span id="summaryFilename"></span>
                 </p>
-                <p style="color: #666; font-size: 0.9em; margin: 5px 0;">
-                    <strong>📖 Total Pages:</strong> <span id="summaryTotalPages"></span>
+                <p style="color: #666; font-size: 0.9em; margin: 5px 0; display: inline-block; margin-right: 20px;">
+                    <strong>📖 Pages:</strong> <span id="summaryTotalPages"></span>
                 </p>
-                <p style="color: #666; font-size: 0.9em; margin: 5px 0;">
-                    <strong>📊 Text Length:</strong> <span id="summaryTextLength"></span> characters
+                <p style="color: #666; font-size: 0.9em; margin: 5px 0; display: inline-block; margin-right: 20px;">
+                    <strong>📊 Characters:</strong> <span id="summaryTextLength"></span>
                 </p>
-                <p style="color: #666; font-size: 0.9em; margin: 5px 0;">
-                    <strong>🤖 Model Used:</strong> <span id="summaryModelUsed"></span>
+                <p style="color: #666; font-size: 0.9em; margin: 5px 0; display: inline-block;">
+                    <strong>🤖 Model:</strong> <span id="summaryModelUsed"></span>
                 </p>
             </div>
+            <div id="summaryText" style="background-color: #fff; padding: 25px; border-radius: 5px; border: 1px solid #e0e0e0; font-size: 1em; line-height: 1.8; color: #333; max-height: 600px; overflow-y: auto; white-space: pre-wrap; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;"></div>
         </div>
-        <button onclick="copySummary()" style="background-color: #1976d2; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 1em;">
-            📋 Copy Summary
-        </button>
+        <div style="margin-top: 15px;">
+            <button onclick="copySummary()" style="background-color: #1976d2; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 1em; margin-right: 10px;">
+                📋 Copy Notes
+            </button>
+            <button onclick="downloadNotes()" style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 1em;">
+                📥 Download as Text
+            </button>
+        </div>
     </div>
 
     <!-- Add status messages before the loader -->
@@ -579,7 +582,7 @@
                 generateSection.style.display = 'none';
                 parseSection.style.display = 'none';
                 splitSection.style.display = 'none';
-                submitButton.textContent = 'Generate Summary';
+                submitButton.textContent = 'Generate Notes';
                 useAmendment.parentElement.parentElement.style.display = 'none';
             }
         }
@@ -942,11 +945,25 @@
         function copySummary() {
             const summaryText = document.getElementById('summaryText').textContent;
             navigator.clipboard.writeText(summaryText).then(function() {
-                alert('Summary copied to clipboard!');
+                alert('Notes copied to clipboard!');
             }).catch(function(err) {
                 console.error('Failed to copy: ', err);
-                alert('Failed to copy summary. Please select and copy manually.');
+                alert('Failed to copy notes. Please select and copy manually.');
             });
+        }
+
+        function downloadNotes() {
+            const summaryText = document.getElementById('summaryText').textContent;
+            const filename = document.getElementById('summaryFilename').textContent || 'notes';
+            const blob = new Blob([summaryText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename.replace('.pdf', '') + '_notes.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
 
         document.getElementById('uploadForm').addEventListener('submit', function(e) {

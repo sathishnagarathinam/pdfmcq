@@ -9,7 +9,7 @@ from mcq_generator import (
     extract_text_from_pdf, generate_mcq_questions, generate_mcq_questions_advanced,
     estimate_max_questions, estimate_max_questions_detailed,
     generate_mcq_questions_with_offline_fallback, get_generation_capabilities,
-    generate_mcq_questions_with_metadata, generate_pdf_summary
+    generate_mcq_questions_with_metadata, generate_pdf_summary, generate_comprehensive_notes
 )
 
 # Global progress queue for SSE (used for real-time progress updates)
@@ -1203,7 +1203,7 @@ def download_split_pdf(session_id, filename):
 @csrf.exempt
 @login_required
 def summarize_pdf():
-    """Generate a summary of the uploaded PDF content"""
+    """Generate comprehensive academic notes from the uploaded PDF content"""
     if 'pdfFile' not in request.files:
         return jsonify({'error': 'No file uploaded'}), 400
 
@@ -1222,7 +1222,7 @@ def summarize_pdf():
 
     try:
         # Extract text from PDF
-        print(f"📄 Processing PDF for summary: {file.filename}")
+        print(f"📄 Processing PDF for comprehensive notes: {file.filename}")
         extracted_text = extract_text_from_pdf(temp_path)
 
         if not extracted_text or len(extracted_text.strip()) < 100:
@@ -1234,23 +1234,23 @@ def summarize_pdf():
         total_pages = len(reader.pages)
 
         print(f"📊 Extracted {len(extracted_text)} characters from {total_pages} pages")
-        print(f"🤖 Generating summary with model: {model_type}")
+        print(f"🤖 Generating comprehensive notes with model: {model_type}")
 
-        # Generate summary using the AI model
-        summary = generate_pdf_summary(
+        # Generate comprehensive academic notes using the AI model
+        notes = generate_comprehensive_notes(
             text=extracted_text,
             model_provider=model_provider,
             model_type=model_type
         )
 
-        if not summary:
-            return jsonify({'error': 'Failed to generate summary'}), 500
+        if not notes or "failed" in notes.lower():
+            return jsonify({'error': 'Failed to generate notes'}), 500
 
-        print(f"✅ Summary generated: {summary[:100]}...")
+        print(f"✅ Notes generated: {len(notes)} characters")
 
         return jsonify({
             'success': True,
-            'summary': summary,
+            'summary': notes,  # Keep 'summary' key for frontend compatibility
             'filename': file.filename,
             'total_pages': total_pages,
             'text_length': len(extracted_text),
@@ -1258,10 +1258,10 @@ def summarize_pdf():
         }), 200
 
     except Exception as e:
-        print(f"Error generating summary: {e}")
+        print(f"Error generating notes: {e}")
         import traceback
         return jsonify({
-            'error': f'Error generating summary: {str(e)}',
+            'error': f'Error generating notes: {str(e)}',
             'traceback': traceback.format_exc()
         }), 500
 

@@ -223,6 +223,136 @@ Provide ONLY the 2-line summary, nothing else."""
         print(f"⚠️  Error generating PDF summary: {e}")
         return "Summary generation failed"
 
+
+def generate_comprehensive_notes(text, model_provider='openrouter', model_type='deepseek/deepseek-chat'):
+    """
+    Generate EXHAUSTIVE, ERROR-FREE, AND COMPLETE NOTES from PDF content.
+    Designed for academic/exam preparation with detailed rule-wise analysis.
+
+    Args:
+        text (str): Extracted text from PDF
+        model_provider (str): AI provider to use
+        model_type (str): Model identifier
+
+    Returns:
+        str: Comprehensive notes with tables, flowcharts, and exam-oriented content
+    """
+    try:
+        if not text or len(text.strip()) < 100:
+            return "Unable to generate notes - insufficient content"
+
+        client = get_ai_client(model_provider)
+        model = get_model_name(model_provider, model_type)
+
+        system_prompt = """You are an expert academic note-maker, government-exam trainer, and documentation analyst.
+Your task is to prepare EXHAUSTIVE, ERROR-FREE, AND COMPLETE NOTES in paragraphs from the given PDF.
+
+⚠️ IMPORTANT:
+- Do NOT summarize loosely
+- Do NOT omit even a single rule, note, explanation, proviso, example, government decision, footnote, appendix, or exception
+- Every rule number, sub-rule, NOTE, and reference must be preserved
+
+These notes will be used for:
+- Daily reference
+- Competitive & departmental examinations
+- Revision before tests"""
+
+        user_prompt = f"""📘 DOCUMENT HANDLING INSTRUCTIONS
+- Process the PDF chapter-by-chapter and rule-by-rule
+- Maintain original numbering (Chapter, Rule, Sub-rule, Notes)
+- Preserve exact legal/technical meaning
+- Use simple language ONLY for explanation, not for altering rules
+
+🧠 NOTE-MAKING STRUCTURE (MANDATORY)
+
+For EVERY chapter, follow this exact format:
+
+🔹 CHAPTER OVERVIEW
+- Purpose of the chapter
+- Who should study it (DDO / Accounts / Audit / Exam point of view)
+- Key financial concepts involved
+
+🔹 DETAILED NOTES (RULE-WISE)
+For each Rule, present information as:
+📌 Rule Number & Title
+- Exact rule text (simplified but complete)
+- Break into bullet points wherever required
+- Highlight keywords in bold
+- Mention: Authority, Time limits, Financial powers, Conditions, Exceptions, Cross-references to other rules
+
+🔹 STUDY TOOLS (VERY IMPORTANT)
+After every 2–3 rules, add:
+📊 TABLES - Example formats:
+| Rule No | Subject | Authority | Time Limit | Key Condition |
+| Situation | What is Allowed | What is Prohibited |
+
+🔁 FLOWCHARTS (TEXT-BASED) - Example:
+Claim Raised → Verification → Sanction → Audit → Payment → Record Entry
+
+🔹 EXAM-ORIENTED SECTION (VERY IMPORTANT)
+After each chapter, add:
+📝 EXAM HIGHLIGHTS
+- Most important rules
+- Frequently confused provisions
+- Common mistakes by students
+- Areas from which MCQs are framed
+
+🔹 QUICK REVISION SHEET (END OF CHAPTER)
+- One-page ultra-summary
+- Rule numbers only
+- Tables only
+- "Must-remember points"
+
+📚 APPENDICES & ANNEXURES HANDLING
+- Treat Appendices as equally important
+- Convert: Lists → Tables, Procedures → Flowcharts, Conditions → Comparison charts
+
+⚠️ QUALITY CONTROL CHECK
+Before finalizing notes:
+✔ No rule skipped
+✔ No appendix skipped
+✔ No note or proviso skipped
+✔ All numerical limits preserved
+✔ Language is exam-friendly but legally accurate
+
+📤 OUTPUT FORMAT
+- Use clear headings
+- Use numbering
+- Use tables frequently
+- Make it suitable for: PDF printing, Daily revision, One-night exam revision
+
+🔥 PRO TIP: If content is too long, continue automatically from where you stopped without repeating.
+
+---
+DOCUMENT CONTENT TO PROCESS:
+{text}"""
+
+        # For comprehensive notes, we need much higher token limit
+        max_tokens = 16000 if 'deepseek' in model.lower() else 8000
+
+        print(f"📝 Generating comprehensive notes with model: {model}")
+        print(f"📊 Processing {len(text)} characters of text...")
+
+        completion = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            max_tokens=max_tokens,
+            temperature=0.3,  # Lower temperature for more accurate/consistent output
+        )
+
+        notes = completion.choices[0].message.content.strip()
+        print(f"✅ Generated {len(notes)} characters of comprehensive notes")
+        return notes
+
+    except Exception as e:
+        print(f"⚠️  Error generating comprehensive notes: {e}")
+        import traceback
+        traceback.print_exc()
+        return f"Notes generation failed: {str(e)}"
+
 def equalize_answer_lengths(question):
     """
     Equalize the length of answer options to prevent correct answer identification by length.
