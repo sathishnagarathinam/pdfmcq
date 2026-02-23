@@ -297,6 +297,40 @@
                 <br>
             </div>
 
+            <!-- Summarize Mode Section -->
+            <div id="summarizeModeSection" style="display: none;">
+                <!-- AI Model Configuration for Summarize -->
+                <label for="summarizeModelProvider">AI Model Provider:</label>
+                <select id="summarizeModelProvider" name="summarizeModelProvider" onchange="updateSummarizeModelOptions()">
+                    <option value="openrouter" selected>OpenRouter</option>
+                    <option value="openai">OpenAI</option>
+                    <option value="anthropic">Anthropic</option>
+                    <option value="deepseek">DeepSeek</option>
+                    <option value="custom">Custom Model</option>
+                </select>
+                <br><br>
+
+                <!-- Model Selection for Summarize -->
+                <label for="summarizeModelName">Model:</label>
+                <select id="summarizeModelName" name="summarizeModelName">
+                    <option value="deepseek/deepseek-chat" selected>⭐ DeepSeek V3 - Most Reliable (Recommended)</option>
+                </select>
+                <br><br>
+
+                <!-- Custom Model Configuration for Summarize (hidden by default) -->
+                <div id="summarizeCustomModelConfig" style="display: none;">
+                    <label for="summarizeCustomModelName">Custom Model Name:</label>
+                    <input type="text" id="summarizeCustomModelName" name="summarizeCustomModelName" placeholder="e.g., gpt-4, claude-3-opus">
+                    <br><br>
+                    <label for="summarizeCustomApiKey">API Key:</label>
+                    <input type="password" id="summarizeCustomApiKey" name="summarizeCustomApiKey" placeholder="Enter your API key">
+                    <br><br>
+                    <label for="summarizeCustomBaseUrl">Base URL (optional):</label>
+                    <input type="text" id="summarizeCustomBaseUrl" name="summarizeCustomBaseUrl" placeholder="https://api.example.com/v1">
+                    <br><br>
+                </div>
+            </div>
+
             <!-- Split Mode Section -->
             <div id="splitModeSection" style="display: none;">
                 <label for="splitMode" style="font-weight: bold;">Split Method:</label>
@@ -556,11 +590,41 @@
             }
         }
 
+        // Update model options for summarize mode
+        function updateSummarizeModelOptions() {
+            const provider = document.getElementById('summarizeModelProvider').value;
+            const modelSelect = document.getElementById('summarizeModelName');
+            const customConfig = document.getElementById('summarizeCustomModelConfig');
+
+            // Clear existing options
+            modelSelect.innerHTML = '';
+
+            if (provider === 'custom') {
+                // Show custom model configuration
+                customConfig.style.display = 'block';
+                modelSelect.style.display = 'none';
+            } else {
+                // Hide custom model configuration
+                customConfig.style.display = 'none';
+                modelSelect.style.display = 'block';
+
+                // Populate model options
+                const models = modelConfigs[provider] || [];
+                models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.value;
+                    option.textContent = model.text;
+                    modelSelect.appendChild(option);
+                });
+            }
+        }
+
         // Mode switching function
         function switchMode(mode) {
             const generateSection = document.getElementById('generateModeSection');
             const parseSection = document.getElementById('parseModeSection');
             const splitSection = document.getElementById('splitModeSection');
+            const summarizeSection = document.getElementById('summarizeModeSection');
             const submitButton = document.getElementById('submitButton');
             const amendmentSection = document.getElementById('amendmentUploadSection');
             const useAmendment = document.getElementById('useAmendment');
@@ -569,25 +633,28 @@
                 generateSection.style.display = 'block';
                 parseSection.style.display = 'none';
                 splitSection.style.display = 'none';
+                summarizeSection.style.display = 'none';
                 submitButton.textContent = 'Generate MCQs';
                 useAmendment.parentElement.parentElement.style.display = 'block';
             } else if (mode === 'parse') {
                 generateSection.style.display = 'none';
                 parseSection.style.display = 'block';
                 splitSection.style.display = 'none';
+                summarizeSection.style.display = 'none';
                 submitButton.textContent = 'Parse MCQ PDF';
                 useAmendment.parentElement.parentElement.style.display = 'none';
             } else if (mode === 'split') {
                 generateSection.style.display = 'none';
                 parseSection.style.display = 'none';
-                splitSection.style.display = 'none';
+                splitSection.style.display = 'block';
+                summarizeSection.style.display = 'none';
                 submitButton.textContent = 'Split PDF';
                 useAmendment.parentElement.parentElement.style.display = 'none';
-                splitSection.style.display = 'block';
             } else if (mode === 'summarize') {
                 generateSection.style.display = 'none';
                 parseSection.style.display = 'none';
                 splitSection.style.display = 'none';
+                summarizeSection.style.display = 'block';
                 submitButton.textContent = 'Generate Notes';
                 useAmendment.parentElement.parentElement.style.display = 'none';
             }
@@ -1088,10 +1155,18 @@
                     formData.append('pageRanges', document.getElementById('pageRanges').value);
                 } else if (mode === 'summarize') {
                     endpoint = '/summarize-pdf';
-                    formData.append('modelProvider', document.getElementById('modelProvider').value);
-                    // Use the user's selected model from the dropdown
-                    const selectedModel = document.getElementById('modelName').value;
-                    formData.append('modelType', selectedModel);
+                    const provider = document.getElementById('summarizeModelProvider').value;
+                    formData.append('modelProvider', provider);
+
+                    // Use the user's selected model from the summarize dropdown
+                    if (provider === 'custom') {
+                        formData.append('modelType', document.getElementById('summarizeCustomModelName').value);
+                        formData.append('customApiKey', document.getElementById('summarizeCustomApiKey').value);
+                        formData.append('customBaseUrl', document.getElementById('summarizeCustomBaseUrl').value);
+                    } else {
+                        const selectedModel = document.getElementById('summarizeModelName').value;
+                        formData.append('modelType', selectedModel);
+                    }
                 } else {
                     // Generate mode - use streaming endpoint for real-time progress
                     useStreaming = true;
