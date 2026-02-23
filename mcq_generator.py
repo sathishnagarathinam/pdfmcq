@@ -232,7 +232,7 @@ def generate_comprehensive_notes(text, model_provider='openrouter', model_type='
     Args:
         text (str): Extracted text from PDF
         model_provider (str): AI provider to use
-        model_type (str): Model identifier
+        model_type (str): Model identifier (can be 'basic', 'advanced', or a full model name like 'deepseek/deepseek-chat')
 
     Returns:
         str: Comprehensive notes with tables, flowcharts, and exam-oriented content
@@ -242,7 +242,13 @@ def generate_comprehensive_notes(text, model_provider='openrouter', model_type='
             return "Unable to generate notes - insufficient content"
 
         client = get_ai_client(model_provider)
-        model = get_model_name(model_provider, model_type)
+
+        # If model_type is a full model name (contains '/'), use it directly
+        # Otherwise, use get_model_name to resolve 'basic'/'advanced' to actual model names
+        if '/' in model_type:
+            model = model_type
+        else:
+            model = get_model_name(model_provider, model_type)
 
         system_prompt = """You are an expert academic note-maker, government-exam trainer, and documentation analyst.
 Your task is to prepare EXHAUSTIVE, ERROR-FREE, AND COMPLETE NOTES in paragraphs from the given PDF.

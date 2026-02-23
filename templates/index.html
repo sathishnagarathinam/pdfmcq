@@ -413,8 +413,11 @@
             <button onclick="copySummary()" style="background-color: #1976d2; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 1em; margin-right: 10px;">
                 📋 Copy Notes
             </button>
-            <button onclick="downloadNotes()" style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 1em;">
+            <button onclick="downloadNotes()" style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 1em; margin-right: 10px;">
                 📥 Download as Text
+            </button>
+            <button onclick="downloadNotesAsPDF()" style="background-color: #e53935; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 1em;">
+                📄 Download as PDF
             </button>
         </div>
     </div>
@@ -966,6 +969,48 @@
             URL.revokeObjectURL(url);
         }
 
+        function downloadNotesAsPDF() {
+            const summaryText = document.getElementById('summaryText').textContent;
+            const filename = document.getElementById('summaryFilename').textContent || 'notes';
+
+            if (!summaryText || summaryText.trim() === '') {
+                alert('No notes available to download');
+                return;
+            }
+
+            fetch('/download-notes-pdf', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    notes: summaryText,
+                    filename: filename
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.blob();
+            })
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = filename.replace('.pdf', '') + '_notes.pdf';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            })
+            .catch(error => {
+                console.error('Error downloading PDF:', error);
+                alert('Error downloading PDF. Please try again.');
+            });
+        }
+
         document.getElementById('uploadForm').addEventListener('submit', function(e) {
             e.preventDefault();
             const fileInput = document.getElementById('pdfFile');
@@ -1041,13 +1086,9 @@
                 } else if (mode === 'summarize') {
                     endpoint = '/summarize-pdf';
                     formData.append('modelProvider', document.getElementById('modelProvider').value);
-                    // Use DeepSeek V3 by default for summarization (reliable free model)
-                    const provider = document.getElementById('modelProvider').value;
-                    if (provider === 'openrouter') {
-                        formData.append('modelType', 'deepseek/deepseek-chat');
-                    } else {
-                        formData.append('modelType', document.getElementById('modelSelect').value || 'deepseek/deepseek-chat');
-                    }
+                    // Use the user's selected model from the dropdown
+                    const selectedModel = document.getElementById('modelName').value;
+                    formData.append('modelType', selectedModel);
                 } else {
                     // Generate mode - use streaming endpoint for real-time progress
                     useStreaming = true;

@@ -904,8 +904,113 @@ def download_pdf():
         except Exception as output_error:
             print(f"Error generating PDF output: {output_error}")
             return jsonify({'error': f'PDF generation failed: {output_error}'}), 500
-        
+
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/download-notes-pdf', methods=['POST'])
+@csrf.exempt
+@login_required
+def download_notes_pdf():
+    """Generate a PDF from the comprehensive notes"""
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        notes = data.get('notes', '')
+        filename = data.get('filename', 'notes')
+
+        if not notes or notes.strip() == '':
+            return jsonify({'error': 'No notes content provided'}), 400
+
+        print(f"Generating PDF for notes: {len(notes)} characters")
+
+        # Create PDF with proper formatting
+        pdf = FPDF()
+        pdf.set_auto_page_break(auto=True, margin=15)
+        pdf.add_page()
+
+        # Add title
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(0, 10, "Comprehensive Academic Notes", 0, 1, 'C')
+        pdf.ln(3)
+
+        # Add source filename
+        pdf.set_font("Arial", 'I', 10)
+        clean_filename = filename.replace('.pdf', '') if filename else 'Unknown'
+        pdf.cell(0, 8, f"Source: {clean_filename}", 0, 1, 'C')
+        pdf.ln(10)
+
+        # Add notes content
+        pdf.set_font("Arial", size=11)
+
+        # Process the notes text - handle special characters and formatting
+        lines = notes.split('\n')
+        for line in lines:
+            # Clean the line of problematic characters
+            clean_line = line.encode('latin-1', errors='replace').decode('latin-1')
+
+            # Handle headers (lines starting with # or containing bold markers)
+            if clean_line.strip().startswith('#'):
+                # Remove markdown headers and make bold
+                header_text = clean_line.strip().lstrip('#').strip()
+                pdf.set_font("Arial", 'B', 13)
+                pdf.multi_cell(0, 8, header_text)
+                pdf.set_font("Arial", size=11)
+            elif clean_line.strip().startswith('**') and clean_line.strip().endswith('**'):
+                # Bold text
+                bold_text = clean_line.strip().strip('*').strip()
+                pdf.set_font("Arial", 'B', 11)
+                pdf.multi_cell(0, 7, bold_text)
+                pdf.set_font("Arial", size=11)
+            elif clean_line.strip() == '':
+                # Empty line - add small spacing
+                pdf.ln(3)
+            else:
+                # Regular text
+                pdf.multi_cell(0, 7, clean_line)
+
+        # Create PDF in memory
+        pdf_buffer = BytesIO()
+        try:
+            pdf_string = pdf.output(dest='S')
+
+            if not pdf_string:
+                print("Error: PDF generation returned empty content")
+                return jsonify({'error': 'PDF generation failed - empty content'}), 500
+
+            if isinstance(pdf_string, str):
+                pdf_buffer.write(pdf_string.encode('latin-1'))
+            else:
+                pdf_buffer.write(pdf_string)
+            pdf_buffer.seek(0)
+
+            # Verify PDF content
+            pdf_content = pdf_buffer.getvalue()
+            if len(pdf_content) == 0:
+                print("Error: PDF buffer is empty")
+                return jsonify({'error': 'PDF generation failed - 0 bytes generated'}), 500
+
+            print(f"Notes PDF generated successfully: {len(pdf_content)} bytes")
+
+            download_filename = clean_filename + '_notes.pdf'
+            return send_file(
+                pdf_buffer,
+                mimetype='application/pdf',
+                as_attachment=True,
+                download_name=download_filename
+            )
+
+        except Exception as output_error:
+            print(f"Error generating notes PDF output: {output_error}")
+            return jsonify({'error': f'PDF generation failed: {output_error}'}), 500
+
+    except Exception as e:
+        print(f"Error in download_notes_pdf: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 
