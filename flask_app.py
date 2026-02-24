@@ -36,7 +36,7 @@ import uuid
 # Load environment variables from .env file
 load_dotenv()
 
-# Version: 2.1.0 - PDF Notes Export & Model Selection
+# Version: 2.1.1 - PDF Notes Export & Model Selection (Summarize Feature Fix)
 # ============================================
 # Serverless Configuration
 # ============================================
