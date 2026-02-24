@@ -222,21 +222,21 @@
     </div>
 
     <!-- Mode Selector -->
-    <div style="background-color: #f0f0f0; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
-        <label style="font-weight: bold; margin-right: 20px;">
-            <input type="radio" name="mode" value="generate" checked onchange="switchMode('generate')">
+    <div style="background-color: #f0f0f0; padding: 15px; border-radius: 5px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 10px 20px;">
+        <label style="font-weight: bold; display: flex; align-items: center; white-space: nowrap;">
+            <input type="radio" name="mode" value="generate" checked onchange="switchMode('generate')" style="margin-right: 5px;">
             🤖 Generate New MCQs from PDF Content
         </label>
-        <label style="font-weight: bold; margin-right: 20px;">
-            <input type="radio" name="mode" value="parse" onchange="switchMode('parse')">
+        <label style="font-weight: bold; display: flex; align-items: center; white-space: nowrap;">
+            <input type="radio" name="mode" value="parse" onchange="switchMode('parse')" style="margin-right: 5px;">
             📋 Parse Existing MCQ PDF
         </label>
-        <label style="font-weight: bold; margin-right: 20px;">
-            <input type="radio" name="mode" value="split" onchange="switchMode('split')">
+        <label style="font-weight: bold; display: flex; align-items: center; white-space: nowrap;">
+            <input type="radio" name="mode" value="split" onchange="switchMode('split')" style="margin-right: 5px;">
             ✂️ Split PDF File
         </label>
-        <label style="font-weight: bold;">
-            <input type="radio" name="mode" value="summarize" onchange="switchMode('summarize')">
+        <label style="font-weight: bold; display: flex; align-items: center; white-space: nowrap;">
+            <input type="radio" name="mode" value="summarize" onchange="switchMode('summarize')" style="margin-right: 5px;">
             📝 Generate Notes
         </label>
     </div>
