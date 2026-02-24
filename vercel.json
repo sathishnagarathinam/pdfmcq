@@ -23,7 +23,7 @@
     }
   ],
   "functions": {
-    "api/index.py": {
+    "api/**/*.py": {
       "maxDuration": 300,
       "memory": 2048
     }
