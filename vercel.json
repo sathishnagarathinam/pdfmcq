@@ -21,11 +21,5 @@
         }
       ]
     }
-  ],
-  "functions": {
-    "api/**/*.py": {
-      "maxDuration": 300,
-      "memory": 2048
-    }
-  }
+  ]
 }
