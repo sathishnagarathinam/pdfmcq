@@ -66,6 +66,167 @@ def estimate_token_count(text):
     # Conservative estimate: 1 token per 3.5 characters (accounting for spaces and punctuation)
     return math.ceil(len(text) / 3.5)
 
+def repair_json_response(response):
+    """
+    Attempt to repair and clean up malformed JSON responses from AI models.
+    Handles truncated strings, missing brackets, and other common issues.
+
+    Args:
+        response (str): Raw JSON response that may be malformed
+
+    Returns:
+        str: Repaired JSON string that should be parseable
+    """
+    if not response:
+        return "[]"
+
+    # Remove markdown code blocks
+    if response.startswith('```json'):
+        response = response[7:]
+    elif response.startswith('```'):
+        first_newline = response.find('\n')
+        if first_newline != -1:
+            response = response[first_newline+1:]
+
+    if response.endswith('```'):
+        response = response[:-3]
+
+    response = response.strip()
+
+    # Try to parse as-is first
+    try:
+        json.loads(response)
+        return response
+    except json.JSONDecodeError:
+        pass
+
+    # Fix common issues
+    # 1. Find the last complete JSON object
+    # Count brackets to find valid JSON structure
+    open_brackets = 0
+    open_braces = 0
+    last_valid_pos = -1
+    in_string = False
+    escape_next = False
+
+    for i, char in enumerate(response):
+        if escape_next:
+            escape_next = False
+            continue
+
+        if char == '\\':
+            escape_next = True
+            continue
+
+        if char == '"' and not escape_next:
+            in_string = not in_string
+            continue
+
+        if in_string:
+            continue
+
+        if char == '[':
+            open_brackets += 1
+        elif char == ']':
+            open_brackets -= 1
+            if open_brackets == 0 and open_braces == 0:
+                last_valid_pos = i
+        elif char == '{':
+            open_braces += 1
+        elif char == '}':
+            open_braces -= 1
+            if open_brackets == 1 and open_braces == 0:
+                # End of a complete object in array
+                last_valid_pos = i
+
+    # 2. If we're in a truncated string, try to close it
+    if in_string:
+        # Find the last complete question object
+        # Look for the last complete "}" that closes an object
+        search_pos = len(response) - 1
+        brace_count = 0
+        found_close = False
+
+        while search_pos >= 0:
+            char = response[search_pos]
+            if char == '}':
+                brace_count += 1
+                if brace_count == 1:
+                    # Check if this is a complete object by going back
+                    test_str = response[:search_pos+1]
+                    # Find matching opening brace
+                    temp_braces = 0
+                    for j in range(search_pos, -1, -1):
+                        if response[j] == '}':
+                            temp_braces += 1
+                        elif response[j] == '{':
+                            temp_braces -= 1
+                            if temp_braces == 0:
+                                # Found a complete object, check if array wrapper is there
+                                if '[' in response[:j]:
+                                    last_valid_pos = search_pos
+                                    found_close = True
+                                    break
+                    if found_close:
+                        break
+            search_pos -= 1
+
+    # 3. Truncate to last valid position and close properly
+    if last_valid_pos > 0:
+        response = response[:last_valid_pos+1]
+
+        # Count remaining open brackets/braces
+        open_brackets = response.count('[') - response.count(']')
+        open_braces = response.count('{') - response.count('}')
+
+        # Close any remaining open braces then brackets
+        response += '}' * open_braces + ']' * open_brackets
+    else:
+        # Try a more aggressive approach: extract all complete question objects
+        pattern = r'\{[^{}]*"question"[^{}]*"options"[^{}]*\{[^{}]*\}[^{}]*"correct"[^{}]*\}'
+        matches = re.findall(pattern, response, re.DOTALL)
+        if matches:
+            response = '[' + ','.join(matches) + ']'
+        else:
+            # Last resort: return empty array
+            return "[]"
+
+    # Try to parse the repaired JSON
+    try:
+        json.loads(response)
+        return response
+    except json.JSONDecodeError:
+        # If still failing, try to extract just the question objects
+        try:
+            # Find all objects that look like questions
+            objects = []
+            brace_depth = 0
+            obj_start = -1
+
+            for i, char in enumerate(response):
+                if char == '{':
+                    if brace_depth == 0:
+                        obj_start = i
+                    brace_depth += 1
+                elif char == '}':
+                    brace_depth -= 1
+                    if brace_depth == 0 and obj_start >= 0:
+                        obj_str = response[obj_start:i+1]
+                        try:
+                            obj = json.loads(obj_str)
+                            if 'question' in obj and 'options' in obj:
+                                objects.append(obj_str)
+                        except:
+                            pass
+                        obj_start = -1
+
+            if objects:
+                return '[' + ','.join(objects) + ']'
+        except:
+            pass
+
+        return "[]"
+
 def get_model_token_limits(provider, model_name):
     """
     Get the appropriate token limits for different models and providers.
@@ -73,48 +234,35 @@ def get_model_token_limits(provider, model_name):
     """
     # Free tier models have much lower limits and rate limits
     # Note: Free models on OpenRouter change frequently - some may become unavailable
-    # Updated: Feb 2026 based on OpenRouter free models collection
+    # Updated: Feb 2026 based on currently available OpenRouter free models
     free_tier_models = {
         # DeepSeek Models (Most Reliable)
         'deepseek/deepseek-chat': {'tokens': 8000, 'rate_limit': '50/day'},  # DeepSeek V3 - Most reliable
-        'deepseek/deepseek-r1-0528:free': {'tokens': 8000, 'rate_limit': '20/min'},  # DeepSeek R1 reasoning
+        'deepseek/deepseek-chat:free': {'tokens': 8000, 'rate_limit': '20/min'},  # DeepSeek Chat Free
+        'deepseek/deepseek-r1:free': {'tokens': 8000, 'rate_limit': '20/min'},  # DeepSeek R1 (latest)
 
-        # Arcee AI Models (Frontier)
-        'arcee-ai/trinity-large-preview:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Trinity Large Preview
-        'arcee-ai/trinity-mini:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Trinity Mini
-
-        # Meta Llama Models
+        # Meta Llama Models (Most Stable)
         'meta-llama/llama-3.3-70b-instruct:free': {'tokens': 8000, 'rate_limit': '20/min'},
+        'meta-llama/llama-3.2-3b-instruct:free': {'tokens': 8000, 'rate_limit': '20/min'},
+        'meta-llama/llama-3.1-8b-instruct:free': {'tokens': 8000, 'rate_limit': '20/min'},
 
         # Qwen Models
-        'qwen/qwen3-235b-a22b-instruct:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Qwen3 235B
-        'qwen/qwen3-coder:free': {'tokens': 8000, 'rate_limit': '8/min'},  # Qwen3 Coder 480B
+        'qwen/qwen-2.5-72b-instruct:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Qwen 2.5 72B
+        'qwen/qwen-2.5-coder-32b-instruct:free': {'tokens': 8000, 'rate_limit': '8/min'},  # Qwen 2.5 Coder
 
-        # NVIDIA Models
-        'nvidia/nemotron-nano-9b-v2:free': {'tokens': 8000, 'rate_limit': '50/min'},  # Nemotron Nano 9B
-        'nvidia/nemotron-3-nano-30b-a3b:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Nemotron 3 Nano
-
-        # OpenAI Open Source
-        'openai/gpt-oss-20b:free': {'tokens': 8000, 'rate_limit': '20/min'},  # GPT OSS 20B
-        'openai/gpt-oss-120b:free': {'tokens': 8000, 'rate_limit': '20/min'},  # GPT OSS 120B
-
-        # StepFun
-        'stepfun/step-3.5-flash:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Step 3.5 Flash
-
-        # Z.ai
-        'z-ai/glm-4.5-air:free': {'tokens': 8000, 'rate_limit': '20/min'},  # GLM 4.5 Air
-
-        # Upstage
-        'upstage/solar-pro-3:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Solar Pro 3
+        # Google Gemma (Stable)
+        'google/gemma-2-9b-it:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Gemma 2 9B
 
         # Microsoft Phi
         'microsoft/phi-3-medium-128k-instruct:free': {'tokens': 16000, 'rate_limit': '20/min'},
+        'microsoft/phi-3-mini-128k-instruct:free': {'tokens': 16000, 'rate_limit': '20/min'},
 
-        # Mistral
+        # Mistral (Stable)
         'mistralai/mistral-7b-instruct:free': {'tokens': 8000, 'rate_limit': '20/min'},
+        'mistralai/mistral-nemo:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Mistral Nemo
 
-        # Google (Limited Rate)
-        'google/gemini-2.0-flash-exp:free': {'tokens': 6000, 'rate_limit': '4/min'},
+        # HuggingFace Models
+        'huggingfaceh4/zephyr-7b-beta:free': {'tokens': 8000, 'rate_limit': '20/min'},
     }
 
     # Check if it's a free tier model
@@ -145,25 +293,22 @@ def get_rate_limit_delay(model_name, chunk_number):
     Returns delay in seconds.
     """
     rate_limit_delays = {
-        # Very limited models
-        'google/gemini-2.0-flash-exp:free': 15,  # 4 req/min = 15 sec between requests
-        'qwen/qwen3-coder:free': 8,  # 8 req/min = 8 sec between requests
+        # Coder models (limited rate)
+        'qwen/qwen-2.5-coder-32b-instruct:free': 8,  # 8 req/min = 8 sec between requests
 
         # Standard free tier models (20 req/min = 3 sec between requests)
         'meta-llama/llama-3.3-70b-instruct:free': 3,
-        'qwen/qwen3-235b-a22b-instruct:free': 3,
-        'deepseek/deepseek-r1-0528:free': 3,
-        'arcee-ai/trinity-large-preview:free': 3,
-        'arcee-ai/trinity-mini:free': 3,
-        'nvidia/nemotron-nano-9b-v2:free': 2,  # 50 req/min
-        'nvidia/nemotron-3-nano-30b-a3b:free': 3,
-        'openai/gpt-oss-20b:free': 3,
-        'openai/gpt-oss-120b:free': 3,
-        'stepfun/step-3.5-flash:free': 3,
-        'z-ai/glm-4.5-air:free': 3,
-        'upstage/solar-pro-3:free': 3,
+        'meta-llama/llama-3.2-3b-instruct:free': 3,
+        'meta-llama/llama-3.1-8b-instruct:free': 3,
+        'qwen/qwen-2.5-72b-instruct:free': 3,
+        'deepseek/deepseek-chat:free': 3,
+        'deepseek/deepseek-r1:free': 3,
+        'google/gemma-2-9b-it:free': 3,
         'microsoft/phi-3-medium-128k-instruct:free': 3,
+        'microsoft/phi-3-mini-128k-instruct:free': 3,
         'mistralai/mistral-7b-instruct:free': 3,
+        'mistralai/mistral-nemo:free': 3,
+        'huggingfaceh4/zephyr-7b-beta:free': 3,
 
         # DeepSeek V3 (daily limit, conservative delay)
         'deepseek/deepseek-chat': 1,
@@ -1207,13 +1352,9 @@ def generate_mcq_questions(text, num_questions=5, model_provider='openrouter', m
                     print(f"📥 Raw API response for chunk {i+1}: {response[:200]}...")
 
                     # Clean up response if it contains markdown formatting
-                    if response.startswith('```json'):
-                        response = response[7:]
-                    if response.endswith('```'):
-                        response = response[:-3]
-                    response = response.strip()
-
-                    print(f"🧹 Cleaned response: {response[:200]}...")
+                    # Use robust JSON repair to handle truncated/malformed responses
+                    response = repair_json_response(response)
+                    print(f"🧹 Cleaned and repaired response: {response[:200]}...")
 
                     chunk_questions = json.loads(response)
                     print(f"✅ Parsed {len(chunk_questions) if isinstance(chunk_questions, list) else 1} questions from chunk {i+1}")
@@ -1330,14 +1471,9 @@ def generate_mcq_questions(text, num_questions=5, model_provider='openrouter', m
             response = completion.choices[0].message.content.strip()
             print(f"📥 Raw API response: {response[:300]}...")
 
-            # Clean up response if it contains markdown formatting
-            if response.startswith('```json'):
-                response = response[7:]
-            if response.endswith('```'):
-                response = response[:-3]
-            response = response.strip()
-
-            print(f"🧹 Cleaned response: {response[:300]}...")
+            # Use robust JSON repair to handle truncated/malformed responses
+            response = repair_json_response(response)
+            print(f"🧹 Cleaned and repaired response: {response[:300]}...")
 
             parsed_response = json.loads(response)
             print(f"✅ Successfully parsed {len(parsed_response) if isinstance(parsed_response, list) else 1} questions")
@@ -1516,12 +1652,8 @@ def generate_mcq_questions_advanced(text, num_questions=5, difficulty='medium', 
 
                     response = completion.choices[0].message.content.strip()
 
-                    # Clean up response if it contains markdown formatting
-                    if response.startswith('```json'):
-                        response = response[7:]
-                    if response.endswith('```'):
-                        response = response[:-3]
-                    response = response.strip()
+                    # Use robust JSON repair to handle truncated/malformed responses
+                    response = repair_json_response(response)
 
                     chunk_questions = json.loads(response)
 
@@ -1621,22 +1753,8 @@ def generate_mcq_questions_advanced(text, num_questions=5, difficulty='medium', 
             print(f"✅ API response received from {model_name}")
             response = completion.choices[0].message.content.strip()
 
-            # Clean up response if it contains markdown formatting
-            if response.startswith('```json'):
-                response = response[7:]
-            if response.endswith('```'):
-                response = response[:-3]
-            response = response.strip()
-
-            # Also handle markdown with just "json" (some models)
-            if response.startswith('```'):
-                # Find the end of the first line
-                first_newline = response.find('\n')
-                if first_newline != -1:
-                    response = response[first_newline+1:]
-                if response.endswith('```'):
-                    response = response[:-3]
-                response = response.strip()
+            # Use robust JSON repair to handle truncated/malformed responses
+            response = repair_json_response(response)
 
             parsed_response = json.loads(response)
             print(f"✅ Successfully parsed {len(parsed_response) if isinstance(parsed_response, list) else 1} questions from {model_name}")

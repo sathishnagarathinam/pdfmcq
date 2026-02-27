@@ -509,41 +509,36 @@
 
         // Model configurations
         // Note: Free models on OpenRouter change frequently - some may become unavailable
-        // Updated: Feb 2026 based on OpenRouter free models collection
+        // Updated: Feb 2026 based on currently available OpenRouter free models
         const modelConfigs = {
             openrouter: [
-                // ⭐ Most Reliable - DeepSeek V3 (Recommended)
+                // ⭐ Most Reliable - DeepSeek Models (Recommended)
                 { value: 'deepseek/deepseek-chat', text: '⭐ DeepSeek V3 - Most Reliable (Recommended)' },
-                { value: 'deepseek/deepseek-r1-0528:free', text: 'DeepSeek R1 0528 (Free) - Reasoning Model' },
+                { value: 'deepseek/deepseek-chat:free', text: 'DeepSeek Chat (Free) - Reliable' },
+                { value: 'deepseek/deepseek-r1:free', text: 'DeepSeek R1 (Free) - Reasoning Model' },
 
-                // 🔥 Arcee AI Models (Frontier)
-                { value: 'arcee-ai/trinity-large-preview:free', text: '🔥 Arcee Trinity Large Preview (Free) - 400B Frontier' },
-                { value: 'arcee-ai/trinity-mini:free', text: 'Arcee Trinity Mini (Free) - 26B Efficient' },
-
-                // Meta Llama Models
+                // Meta Llama Models (Most Stable)
                 { value: 'meta-llama/llama-3.3-70b-instruct:free', text: 'Llama 3.3 70B (Free) - High Quality' },
+                { value: 'meta-llama/llama-3.2-3b-instruct:free', text: 'Llama 3.2 3B (Free) - Fast' },
+                { value: 'meta-llama/llama-3.1-8b-instruct:free', text: 'Llama 3.1 8B (Free) - Balanced' },
 
                 // Qwen Models
-                { value: 'qwen/qwen3-235b-a22b-instruct:free', text: 'Qwen3 235B (Free) - High Performance' },
-                { value: 'qwen/qwen3-coder:free', text: 'Qwen3 Coder 480B (Free) - Code Expert' },
+                { value: 'qwen/qwen-2.5-72b-instruct:free', text: 'Qwen 2.5 72B (Free) - High Performance' },
+                { value: 'qwen/qwen-2.5-coder-32b-instruct:free', text: 'Qwen 2.5 Coder 32B (Free) - Code Expert' },
 
-                // NVIDIA Models
-                { value: 'nvidia/nemotron-nano-9b-v2:free', text: 'NVIDIA Nemotron Nano 9B (Free) - Fast' },
-                { value: 'nvidia/nemotron-3-nano-30b-a3b:free', text: 'NVIDIA Nemotron 3 Nano 30B (Free) - Efficient' },
+                // Google Gemma (Stable)
+                { value: 'google/gemma-2-9b-it:free', text: 'Google Gemma 2 9B (Free) - Stable' },
 
-                // OpenAI Open Source
-                { value: 'openai/gpt-oss-20b:free', text: 'OpenAI GPT-OSS 20B (Free) - Lightweight' },
-                { value: 'openai/gpt-oss-120b:free', text: 'OpenAI GPT-OSS 120B (Free) - High Quality' },
-
-                // Other Free Models
-                { value: 'stepfun/step-3.5-flash:free', text: 'StepFun Step 3.5 Flash (Free) - Fast' },
-                { value: 'z-ai/glm-4.5-air:free', text: 'Z.ai GLM 4.5 Air (Free) - Agent Optimized' },
-                { value: 'upstage/solar-pro-3:free', text: 'Upstage Solar Pro 3 (Free) - Korean/English' },
+                // Microsoft Phi Models
                 { value: 'microsoft/phi-3-medium-128k-instruct:free', text: 'Phi-3 Medium 128K (Free) - Long Context' },
-                { value: 'mistralai/mistral-7b-instruct:free', text: 'Mistral 7B (Free) - Efficient' },
+                { value: 'microsoft/phi-3-mini-128k-instruct:free', text: 'Phi-3 Mini 128K (Free) - Fast' },
 
-                // Limited Rate Models (Use with caution)
-                { value: 'google/gemini-2.0-flash-exp:free', text: 'Gemini 2.0 Flash (Free) - ⚠️ 4 req/min only' }
+                // Mistral Models (Stable)
+                { value: 'mistralai/mistral-7b-instruct:free', text: 'Mistral 7B (Free) - Efficient' },
+                { value: 'mistralai/mistral-nemo:free', text: 'Mistral Nemo (Free) - Latest' },
+
+                // HuggingFace Models
+                { value: 'huggingfaceh4/zephyr-7b-beta:free', text: 'Zephyr 7B Beta (Free) - HuggingFace' }
             ],
             openai: [
                 { value: 'gpt-3.5-turbo', text: 'GPT-3.5 Turbo' },

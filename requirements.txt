@@ -23,3 +23,11 @@ flask-wtf==1.2.1
 # Utilities
 Werkzeug==2.3.7
 Jinja2==3.1.2
+
+# OCR Support for Image-based PDFs
+# Note: pytesseract requires Tesseract OCR to be installed at system level
+# For local development: brew install tesseract (macOS) or apt install tesseract-ocr (Linux)
+# For Vercel: OCR is limited due to serverless environment constraints
+pillow>=10.0.0
+pymupdf>=1.23.0
+pytesseract>=0.3.10
