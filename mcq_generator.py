@@ -241,6 +241,18 @@ def get_model_token_limits(provider, model_name):
         'deepseek/deepseek-chat:free': {'tokens': 8000, 'rate_limit': '20/min'},  # DeepSeek Chat Free
         'deepseek/deepseek-r1:free': {'tokens': 8000, 'rate_limit': '20/min'},  # DeepSeek R1 (latest)
 
+        # Arcee AI Models (Frontier)
+        'arcee-ai/arcee-blitz': {'tokens': 8000, 'rate_limit': '20/min'},  # Arcee Blitz
+        'arcee-ai/arcee-lite': {'tokens': 8000, 'rate_limit': '20/min'},  # Arcee Lite
+        'arcee-ai/caller': {'tokens': 8000, 'rate_limit': '20/min'},  # Arcee Caller
+        'arcee-ai/coder-large': {'tokens': 8000, 'rate_limit': '20/min'},  # Arcee Coder Large
+        'arcee-ai/maestro-reasoning': {'tokens': 8000, 'rate_limit': '20/min'},  # Arcee Maestro Reasoning
+        'arcee-ai/virtuoso-medium-v2': {'tokens': 8000, 'rate_limit': '20/min'},  # Arcee Virtuoso Medium V2
+
+        # NVIDIA Nemotron Models
+        'nvidia/llama-3.1-nemotron-70b-instruct:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Nemotron 70B
+        'nvidia/llama-3.3-nemotron-super-49b-v1:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Nemotron Super 49B
+
         # Meta Llama Models (Most Stable)
         'meta-llama/llama-3.3-70b-instruct:free': {'tokens': 8000, 'rate_limit': '20/min'},
         'meta-llama/llama-3.2-3b-instruct:free': {'tokens': 8000, 'rate_limit': '20/min'},
@@ -295,6 +307,18 @@ def get_rate_limit_delay(model_name, chunk_number):
     rate_limit_delays = {
         # Coder models (limited rate)
         'qwen/qwen-2.5-coder-32b-instruct:free': 8,  # 8 req/min = 8 sec between requests
+
+        # Arcee AI Models
+        'arcee-ai/arcee-blitz': 3,
+        'arcee-ai/arcee-lite': 3,
+        'arcee-ai/caller': 3,
+        'arcee-ai/coder-large': 3,
+        'arcee-ai/maestro-reasoning': 3,
+        'arcee-ai/virtuoso-medium-v2': 3,
+
+        # NVIDIA Nemotron Models
+        'nvidia/llama-3.1-nemotron-70b-instruct:free': 3,
+        'nvidia/llama-3.3-nemotron-super-49b-v1:free': 3,
 
         # Standard free tier models (20 req/min = 3 sec between requests)
         'meta-llama/llama-3.3-70b-instruct:free': 3,
