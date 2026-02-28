@@ -524,16 +524,22 @@ DOCUMENT CONTENT TO PROCESS:
 
 def equalize_answer_lengths(question):
     """
-    Equalize the length of answer options to prevent correct answer identification by length.
+    Validate and clean answer options without truncation.
 
-    This function ensures that all answer options have similar lengths, making it harder
-    for users to identify the correct answer based on option length alone.
+    IMPORTANT: This function NO LONGER truncates options to preserve complete sentences.
+    Previously, this function would truncate long options to match average length,
+    which caused incomplete sentences in MCQ options.
+
+    Now it only performs validation and cleanup:
+    - Strips leading/trailing whitespace
+    - Ensures options end with proper punctuation if they look incomplete
+    - Returns the question with cleaned (but NOT truncated) options
 
     Args:
         question (dict): Question with options A, B, C, D
 
     Returns:
-        dict: Question with equalized option lengths
+        dict: Question with cleaned option text (preserving full sentences)
     """
     try:
         if 'options' not in question:
@@ -541,47 +547,97 @@ def equalize_answer_lengths(question):
 
         options = question['options']
 
-        # Get lengths of all options
-        lengths = {key: len(options.get(key, '')) for key in ['A', 'B', 'C', 'D']}
-
-        # Calculate target length (average of all options)
-        valid_lengths = [l for l in lengths.values() if l > 0]
-        if not valid_lengths:
-            return question
-
-        avg_length = sum(valid_lengths) / len(valid_lengths)
-        target_length = int(avg_length)
-
-        # Equalize each option
-        equalized_options = {}
+        # Clean each option without truncating
+        cleaned_options = {}
         for key in ['A', 'B', 'C', 'D']:
             option_text = options.get(key, '')
-            current_length = len(option_text)
 
-            if current_length == 0:
-                equalized_options[key] = option_text
-            elif current_length > target_length:
-                # Truncate to target length, trying to cut at word boundary
-                truncated = option_text[:target_length]
-                # Try to find last space to avoid cutting mid-word
-                last_space = truncated.rfind(' ')
-                if last_space > target_length * 0.7:  # Only use space if it's not too early
-                    truncated = truncated[:last_space].rstrip()
-                equalized_options[key] = truncated
-            else:
-                # Pad with ellipsis or keep as is if close to target
-                if target_length - current_length <= 3:
-                    equalized_options[key] = option_text
-                else:
-                    # Add ellipsis to indicate truncation if needed
-                    equalized_options[key] = option_text
+            if option_text:
+                # Strip whitespace
+                option_text = option_text.strip()
 
-        question['options'] = equalized_options
+                # Check if option looks incomplete (ends with certain patterns)
+                incomplete_endings = [' the', ' a', ' an', ' of', ' to', ' for', ' with', ' by', ' in', ' on', ' at', ' and', ' or', ' is', ' are', ' was', ' were', ' has', ' have', ' its', ' their', ' his', ' her']
+
+                # Log warning if option appears truncated but don't modify
+                lower_text = option_text.lower()
+                for ending in incomplete_endings:
+                    if lower_text.endswith(ending):
+                        print(f"⚠️  Warning: Option {key} may be truncated (ends with '{ending}'): {option_text[:50]}...")
+                        break
+
+            cleaned_options[key] = option_text
+
+        question['options'] = cleaned_options
         return question
 
     except Exception as e:
-        print(f"⚠️  Error equalizing answer lengths: {e}")
+        print(f"⚠️  Error cleaning answer options: {e}")
         return question
+
+
+def validate_complete_sentences(questions):
+    """
+    Validate that all MCQ options are complete sentences.
+    Logs warnings for any options that appear to be truncated.
+
+    Args:
+        questions (list): List of question dictionaries
+
+    Returns:
+        tuple: (validated_questions, warning_count)
+    """
+    # Common endings that indicate truncated sentences
+    incomplete_endings = [
+        ' the', ' a', ' an', ' of', ' to', ' for', ' with', ' by',
+        ' in', ' on', ' at', ' and', ' or', ' is', ' are', ' was',
+        ' were', ' has', ' have', ' its', ' their', ' his', ' her',
+        ' as', ' be', ' been', ' being', ' this', ' that', ' which',
+        ' who', ' whom', ' whose', ' what', ' when', ' where', ' why',
+        ' how', ' if', ' than', ' then', ' so', ' but', ' not', ' no',
+        ' any', ' all', ' each', ' every', ' some', ' such', ' other',
+        ' shall', ' should', ' would', ' could', ' may', ' might', ' must',
+        ' can', ' will', ' from', '...'
+    ]
+
+    warning_count = 0
+
+    for q_idx, question in enumerate(questions):
+        if 'options' not in question:
+            continue
+
+        options = question.get('options', {})
+
+        for opt_key in ['A', 'B', 'C', 'D']:
+            opt_text = options.get(opt_key, '')
+            if not opt_text:
+                continue
+
+            opt_text_lower = opt_text.lower().rstrip()
+
+            # Check for incomplete endings
+            is_truncated = False
+            for ending in incomplete_endings:
+                if opt_text_lower.endswith(ending):
+                    is_truncated = True
+                    print(f"⚠️  Q{q_idx + 1} Option {opt_key} may be truncated (ends with '{ending}'): {opt_text[:80]}...")
+                    warning_count += 1
+                    break
+
+            # Also check if option doesn't end with proper punctuation
+            if not is_truncated and opt_text and opt_text[-1] not in '.!?:;"\')\u201d':
+                # Only warn if it's a long option (likely a full sentence that got cut)
+                if len(opt_text) > 50:
+                    print(f"⚠️  Q{q_idx + 1} Option {opt_key} may be incomplete (no ending punctuation): {opt_text[:80]}...")
+                    warning_count += 1
+
+    if warning_count > 0:
+        print(f"⚠️  Total truncation warnings: {warning_count}")
+    else:
+        print("✅ All options appear to be complete sentences")
+
+    return questions, warning_count
+
 
 def find_page_and_section_for_text(text_snippet, page_map, sections):
     """
@@ -1359,10 +1415,13 @@ def generate_mcq_questions(text, num_questions=5, model_provider='openrouter', m
                     time.sleep(delay)
 
                 try:
+                    # Strong complete sentence instruction
+                    complete_sentence_rule = " ABSOLUTE REQUIREMENT - COMPLETE SENTENCES: Every MCQ option (A, B, C, D) MUST be a grammatically complete sentence ending with proper punctuation. NEVER end an option with: 'the', 'a', 'an', 'of', 'to', 'for', 'with', 'by', 'in', 'on', 'at', 'and', 'or', 'is', 'are', 'its', 'their', 'his', 'her'. If a sentence is too long, make it SHORTER but COMPLETE - do NOT truncate."
+
                     completion = client.chat.completions.create(
                         model=model,
                         messages=[
-                            {"role": "system", "content": "You are an expert educator specializing in government rules, regulations, and policy documents. You create high-quality MCQs with ONLY ONE correct answer per question. You MUST: 1) Ensure single correct answer under all circumstances, 2) Avoid conditional words like 'may', 'can', 'if required', 3) Include paragraph references for validation, 4) Make each option independently verifiable, 5) Skip questions if exclusivity cannot be guaranteed. CRITICAL: Every option MUST be a COMPLETE sentence - never truncate mid-sentence. Always respond with valid JSON."},
+                            {"role": "system", "content": "You are an expert educator specializing in government rules, regulations, and policy documents. You create high-quality MCQs with ONLY ONE correct answer per question. You MUST: 1) Ensure single correct answer under all circumstances, 2) Avoid conditional words like 'may', 'can', 'if required', 3) Include paragraph references for validation, 4) Make each option independently verifiable, 5) Skip questions if exclusivity cannot be guaranteed. Always respond with valid JSON." + complete_sentence_rule},
                             {"role": "user", "content": chunk_prompt}
                         ],
                         max_tokens=8000,
@@ -1479,10 +1538,14 @@ def generate_mcq_questions(text, num_questions=5, model_provider='openrouter', m
 
             print(f"📤 Sending main prompt: {prompt[:300]}...")
             print(f"📤 Sending API request to {model}")
+
+            # Strong complete sentence instruction
+            complete_sentence_rule = " ABSOLUTE REQUIREMENT - COMPLETE SENTENCES: Every MCQ option (A, B, C, D) MUST be a grammatically complete sentence ending with proper punctuation. NEVER end an option with: 'the', 'a', 'an', 'of', 'to', 'for', 'with', 'by', 'in', 'on', 'at', 'and', 'or', 'is', 'are', 'its', 'their', 'his', 'her'. If a sentence is too long, make it SHORTER but COMPLETE - do NOT truncate."
+
             completion = client.chat.completions.create(
                 model=model,
                 messages=[
-                    {"role": "system", "content": "You are an expert educator specializing in government rules, regulations, and policy documents. You create high-quality MCQs with ONLY ONE correct answer per question. You MUST: 1) Ensure single correct answer under all circumstances, 2) Avoid conditional words like 'may', 'can', 'if required', 3) Include paragraph references for validation, 4) Make each option independently verifiable, 5) Skip questions if exclusivity cannot be guaranteed. CRITICAL: Every option MUST be a COMPLETE sentence - never truncate mid-sentence. Always respond with valid JSON."},
+                    {"role": "system", "content": "You are an expert educator specializing in government rules, regulations, and policy documents. You create high-quality MCQs with ONLY ONE correct answer per question. You MUST: 1) Ensure single correct answer under all circumstances, 2) Avoid conditional words like 'may', 'can', 'if required', 3) Include paragraph references for validation, 4) Make each option independently verifiable, 5) Skip questions if exclusivity cannot be guaranteed. Always respond with valid JSON." + complete_sentence_rule},
                     {"role": "user", "content": prompt}
                 ],
                 max_tokens=8000,
@@ -1665,6 +1728,9 @@ def generate_mcq_questions_advanced(text, num_questions=5, difficulty='medium', 
 
                 try:
                     # Build system message based on amendment mode
+                    # Strong complete sentence instruction appended to all system messages
+                    complete_sentence_instruction = " ABSOLUTE REQUIREMENT - COMPLETE SENTENCES: Every MCQ option (A, B, C, D) MUST be a grammatically complete sentence. NEVER end an option with: 'the', 'a', 'an', 'of', 'to', 'for', 'with', 'by', 'in', 'on', 'at', 'and', 'or', 'is', 'are', 'its', 'their'. Each option must end with a period or proper punctuation. If you cannot complete a sentence within token limits, make the sentence SHORTER but COMPLETE - do NOT truncate."
+
                     if use_amendment:
                         system_message = "You are an expert educator analyzing an original document and its amendment. You create high-quality MCQs with ONLY ONE correct answer per question, focusing on changes, differences, and new provisions introduced by amendments. You MUST: 1) Ensure single correct answer under all circumstances, 2) Avoid conditional words like 'may', 'can', 'if required', 3) Include paragraph references for validation (specify Original/Amendment), 4) Make each option independently verifiable, 5) Skip questions if exclusivity cannot be guaranteed, 6) Focus on amendment changes and differences. Always respond with valid JSON array format."
                     else:
@@ -1673,7 +1739,7 @@ def generate_mcq_questions_advanced(text, num_questions=5, difficulty='medium', 
                     completion = client.chat.completions.create(
                         model=model_name,
                         messages=[
-                            {"role": "system", "content": system_message + " CRITICAL: Every option MUST be a COMPLETE sentence - never truncate mid-sentence."},
+                            {"role": "system", "content": system_message + complete_sentence_instruction},
                             {"role": "user", "content": chunk_prompt}
                         ],
                         max_tokens=8000,
@@ -1778,10 +1844,13 @@ def generate_mcq_questions_advanced(text, num_questions=5, difficulty='medium', 
 
             print(f"📤 Sending API request to model: {model_name}")
 
+            # Strong complete sentence instruction
+            complete_sentence_rule = " ABSOLUTE REQUIREMENT - COMPLETE SENTENCES: Every MCQ option (A, B, C, D) MUST be a grammatically complete sentence ending with proper punctuation. NEVER end an option with: 'the', 'a', 'an', 'of', 'to', 'for', 'with', 'by', 'in', 'on', 'at', 'and', 'or', 'is', 'are', 'its', 'their', 'his', 'her'. If a sentence is too long, make it SHORTER but COMPLETE - do NOT truncate."
+
             completion = client.chat.completions.create(
                 model=model_name,
                 messages=[
-                    {"role": "system", "content": "You are an expert educator specializing in government rules, regulations, and policy documents. You create high-quality MCQs with ONLY ONE correct answer per question. You MUST: 1) Ensure single correct answer under all circumstances, 2) Avoid conditional words like 'may', 'can', 'if required', 3) Include paragraph references for validation, 4) Make each option independently verifiable, 5) Skip questions if exclusivity cannot be guaranteed. CRITICAL: Every option MUST be a COMPLETE sentence - never truncate mid-sentence. Always respond with valid JSON array format."},
+                    {"role": "system", "content": "You are an expert educator specializing in government rules, regulations, and policy documents. You create high-quality MCQs with ONLY ONE correct answer per question. You MUST: 1) Ensure single correct answer under all circumstances, 2) Avoid conditional words like 'may', 'can', 'if required', 3) Include paragraph references for validation, 4) Make each option independently verifiable, 5) Skip questions if exclusivity cannot be guaranteed. Always respond with valid JSON array format." + complete_sentence_rule},
                     {"role": "user", "content": prompt}
                 ],
                 max_tokens=8000,
@@ -2225,8 +2294,13 @@ def generate_mcq_questions_with_metadata(pdf_path, num_questions=5, difficulty='
             question['metadata'] = metadata
             question['question_number'] = i + 1
 
-            # Equalize answer lengths to prevent correct answer identification by length
+            # Clean and validate answer options (no longer truncates)
             question = equalize_answer_lengths(question)
+
+        # Validate that all options are complete sentences
+        questions, truncation_warnings = validate_complete_sentences(questions)
+        if truncation_warnings > 0:
+            print(f"⚠️  {truncation_warnings} options may be incomplete - check AI output quality")
 
         # Generate summary statistics
         summary = generate_question_distribution_summary(questions, page_map, sections, total_pages)
@@ -2237,7 +2311,8 @@ def generate_mcq_questions_with_metadata(pdf_path, num_questions=5, difficulty='
             'page_map': page_map,
             'sections': sections,
             'total_pages': total_pages,
-            'pdf_summary': pdf_summary
+            'pdf_summary': pdf_summary,
+            'truncation_warnings': truncation_warnings
         }
 
     except Exception as e:

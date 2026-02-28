@@ -779,7 +779,7 @@ def download_pdf():
         # Add questions
         for i, q in enumerate(questions, 1):
             try:
-                # Question
+                # Question - use multi_cell for proper text wrapping
                 pdf.set_font("Arial", 'B', 12)
                 # Support both 'text' and 'question' keys - check if text exists and is not empty
                 question_content = q.get('text', '')
@@ -787,36 +787,24 @@ def download_pdf():
                     question_content = q.get('question', '')
                 if not question_content:
                     question_content = 'No question text'
-                question_text = f"{i}. {question_content}"
+                # Encode to latin-1 to handle special characters
+                question_text = f"{i}. {question_content}".encode('latin-1', errors='replace').decode('latin-1')
 
-                # Split long questions into multiple lines
-                if len(question_text) > 80:
-                    words = question_text.split(' ')
-                    lines = []
-                    current_line = ""
-                    for word in words:
-                        if len(current_line + word) < 80:
-                            current_line += word + " "
-                        else:
-                            lines.append(current_line.strip())
-                            current_line = word + " "
-                    if current_line:
-                        lines.append(current_line.strip())
-
-                    for line in lines:
-                        pdf.cell(0, 8, line, 0, 1)
-                else:
-                    pdf.cell(0, 8, question_text, 0, 1)
-
+                # Use multi_cell for automatic text wrapping (supports long questions)
+                pdf.multi_cell(0, 8, question_text)
                 pdf.ln(2)
 
-                # Options
+                # Options - use multi_cell for complete sentences without truncation
                 pdf.set_font("Arial", '', 11)
                 options = q.get('options', {})
-                pdf.cell(0, 6, f"A) {options.get('A', 'No option A')}", 0, 1)
-                pdf.cell(0, 6, f"B) {options.get('B', 'No option B')}", 0, 1)
-                pdf.cell(0, 6, f"C) {options.get('C', 'No option C')}", 0, 1)
-                pdf.cell(0, 6, f"D) {options.get('D', 'No option D')}", 0, 1)
+
+                for opt_key in ['A', 'B', 'C', 'D']:
+                    opt_text = options.get(opt_key, f'No option {opt_key}')
+                    # Encode to latin-1 to handle special characters
+                    opt_text = opt_text.encode('latin-1', errors='replace').decode('latin-1')
+                    # Use multi_cell to properly wrap long option text
+                    pdf.multi_cell(0, 6, f"{opt_key}) {opt_text}")
+
                 pdf.ln(2)
 
                 # Answer and explanation
@@ -840,26 +828,13 @@ def download_pdf():
                             metadata_text += f"{', '.join(sections)}"
                         pdf.cell(0, 6, metadata_text, 0, 1)
 
-                # Explanation
+                # Explanation - use multi_cell for proper text wrapping
                 pdf.set_font("Arial", '', 10)
-                explanation = f"Explanation: {q.get('explanation', 'No explanation provided')}"
-                if len(explanation) > 80:
-                    words = explanation.split(' ')
-                    lines = []
-                    current_line = ""
-                    for word in words:
-                        if len(current_line + word) < 80:
-                            current_line += word + " "
-                        else:
-                            lines.append(current_line.strip())
-                            current_line = word + " "
-                    if current_line:
-                        lines.append(current_line.strip())
-
-                    for line in lines:
-                        pdf.cell(0, 6, line, 0, 1)
-                else:
-                    pdf.cell(0, 6, explanation, 0, 1)
+                explanation = q.get('explanation', 'No explanation provided')
+                # Encode to latin-1 to handle special characters
+                explanation = f"Explanation: {explanation}".encode('latin-1', errors='replace').decode('latin-1')
+                # Use multi_cell for automatic text wrapping
+                pdf.multi_cell(0, 6, explanation)
 
                 pdf.ln(8)
 
@@ -910,11 +885,240 @@ def download_pdf():
         return jsonify({'error': str(e)}), 500
 
 
+class ProfessionalNotesPDF(FPDF):
+    """Custom PDF class for professional notes with headers and footers"""
+
+    def __init__(self, title="Study Material", website="www.example.com"):
+        super().__init__()
+        self.doc_title = title
+        self.website = website
+        self.header_title = "Study Material"
+
+    def header(self):
+        """Add header to each page (except cover page)"""
+        if self.page_no() > 1:
+            # Blue line at top
+            self.set_draw_color(0, 102, 204)
+            self.set_line_width(0.5)
+            self.line(10, 15, 200, 15)
+
+            # Left header - Study Material
+            self.set_font('Arial', 'BI', 10)
+            self.set_text_color(0, 102, 204)
+            self.set_xy(10, 8)
+            self.cell(95, 6, self.header_title, 0, 0, 'L')
+
+            # Right header - Document title
+            self.set_font('Arial', 'BI', 10)
+            self.set_text_color(0, 102, 204)
+            self.set_xy(105, 8)
+            self.cell(95, 6, self.doc_title, 0, 0, 'R')
+
+            self.ln(15)
+
+    def footer(self):
+        """Add footer to each page (except cover page)"""
+        if self.page_no() > 1:
+            self.set_y(-20)
+
+            # Red line
+            self.set_draw_color(204, 51, 51)
+            self.set_line_width(0.5)
+            self.line(10, self.get_y(), 200, self.get_y())
+
+            # Page number (center)
+            self.set_font('Arial', 'B', 10)
+            self.set_text_color(0, 0, 0)
+            self.set_y(-15)
+            self.cell(0, 10, str(self.page_no()), 0, 0, 'C')
+
+            # Website (right)
+            self.set_font('Arial', 'B', 9)
+            self.set_text_color(0, 102, 204)
+            self.set_xy(150, -15)
+            self.cell(50, 10, self.website, 0, 0, 'R')
+
+
+def create_professional_notes_pdf(notes, filename, title=None, website="www.example.com"):
+    """
+    Create a professional PDF with cover page and formatted content.
+    Style inspired by professional study materials.
+    """
+    clean_filename = filename.replace('.pdf', '') if filename else 'Study Notes'
+    doc_title = title if title else clean_filename
+
+    # Create PDF
+    pdf = ProfessionalNotesPDF(title=doc_title, website=website)
+    pdf.set_auto_page_break(auto=True, margin=25)
+
+    # ============================================
+    # COVER PAGE
+    # ============================================
+    pdf.add_page()
+
+    # Title area - centered
+    pdf.ln(40)
+
+    # Main title
+    pdf.set_font('Arial', 'B', 28)
+    pdf.set_text_color(0, 51, 102)
+    pdf.cell(0, 15, "Study Notes", 0, 1, 'C')
+
+    # Subtitle
+    pdf.set_font('Arial', 'I', 14)
+    pdf.set_text_color(100, 100, 100)
+    pdf.cell(0, 10, "A Self Learning Portal", 0, 1, 'C')
+
+    # Website
+    pdf.set_font('Arial', 'B', 12)
+    pdf.set_text_color(0, 102, 204)
+    pdf.cell(0, 10, website, 0, 1, 'C')
+
+    # Document Title
+    pdf.ln(30)
+    pdf.set_font('Arial', 'B', 24)
+    pdf.set_text_color(204, 51, 51)
+    # Handle long titles
+    if len(doc_title) > 40:
+        pdf.multi_cell(0, 12, doc_title, 0, 'C')
+    else:
+        pdf.cell(0, 12, doc_title, 0, 1, 'C')
+
+    # Decorative line
+    pdf.ln(10)
+    pdf.set_draw_color(0, 102, 204)
+    pdf.set_line_width(1)
+    pdf.line(50, pdf.get_y(), 160, pdf.get_y())
+    pdf.ln(5)
+    pdf.set_draw_color(204, 51, 51)
+    pdf.line(60, pdf.get_y(), 150, pdf.get_y())
+
+    # Disclaimer box at bottom
+    pdf.set_y(-70)
+    pdf.set_draw_color(204, 102, 0)
+    pdf.set_fill_color(255, 255, 255)
+    pdf.rect(15, pdf.get_y(), 180, 40, 'D')
+
+    pdf.set_xy(18, pdf.get_y() + 3)
+    pdf.set_font('Arial', 'B', 9)
+    pdf.set_text_color(204, 51, 51)
+    pdf.cell(0, 5, "DISCLAIMER:", 0, 1)
+
+    pdf.set_x(18)
+    pdf.set_font('Arial', 'I', 8)
+    pdf.set_text_color(100, 100, 100)
+    disclaimer_text = (
+        "These notes have been prepared for educational purposes. While every effort "
+        "has been made to ensure accuracy, this document is intended as a study aid only. "
+        "Readers are recommended to refer to official sources for the most reliable and "
+        "authoritative information."
+    )
+    pdf.multi_cell(174, 4, disclaimer_text, 0, 'J')
+
+    # ============================================
+    # CONTENT PAGES
+    # ============================================
+    pdf.add_page()
+
+    # Set proper margins for content area
+    pdf.set_left_margin(15)
+    pdf.set_right_margin(15)
+    pdf.set_x(15)
+
+    # Process the notes text
+    lines = notes.split('\n')
+
+    for line in lines:
+        # Clean the line of problematic characters
+        clean_line = line.encode('latin-1', errors='replace').decode('latin-1')
+        stripped = clean_line.strip()
+
+        # Always reset X position to left margin before each line
+        pdf.set_x(pdf.l_margin)
+
+        # Detect chapter headings (CHAPTER I, CHAPTER II, etc.)
+        if stripped.upper().startswith('CHAPTER') or stripped.upper().startswith('PART'):
+            pdf.ln(8)
+            pdf.set_font('Arial', 'B', 14)
+            pdf.set_text_color(0, 102, 204)  # Blue
+            pdf.multi_cell(0, 8, stripped)
+            pdf.set_text_color(0, 0, 0)
+            pdf.ln(3)
+
+        # Detect section headings (Section X. or lines with "Section")
+        elif stripped.lower().startswith('section') or (stripped.startswith('**') and 'section' in stripped.lower()):
+            pdf.ln(5)
+            section_text = stripped.strip('*').strip()
+            pdf.set_font('Arial', 'B', 12)
+            pdf.set_text_color(0, 102, 204)  # Blue
+            pdf.multi_cell(0, 7, section_text)
+            pdf.set_text_color(0, 0, 0)
+            pdf.ln(2)
+
+        # Detect main headers (lines starting with # or ##)
+        elif stripped.startswith('##'):
+            pdf.ln(6)
+            header_text = stripped.lstrip('#').strip()
+            pdf.set_font('Arial', 'B', 13)
+            pdf.set_text_color(0, 102, 204)  # Blue
+            pdf.multi_cell(0, 8, header_text)
+            pdf.set_text_color(0, 0, 0)
+            pdf.ln(2)
+
+        elif stripped.startswith('#'):
+            pdf.ln(8)
+            header_text = stripped.lstrip('#').strip()
+            pdf.set_font('Arial', 'B', 14)
+            pdf.set_text_color(0, 102, 204)  # Blue
+            pdf.multi_cell(0, 8, header_text)
+            pdf.set_text_color(0, 0, 0)
+            pdf.ln(3)
+
+        # Bold text markers
+        elif stripped.startswith('**') and stripped.endswith('**'):
+            bold_text = stripped.strip('*').strip()
+            pdf.set_font('Arial', 'B', 11)
+            pdf.set_text_color(0, 0, 0)
+            pdf.multi_cell(0, 7, bold_text)
+
+        # Bullet points (use ASCII-safe bullet representation)
+        elif stripped.startswith('- ') or stripped.startswith('* '):
+            pdf.set_font('Arial', '', 11)
+            pdf.set_text_color(0, 0, 0)
+            bullet_text = stripped[2:]
+            pdf.multi_cell(0, 7, "   - " + bullet_text)
+
+        # Unicode bullet points - convert to ASCII
+        elif len(stripped) > 2 and stripped[0] in [u'\u2022', u'\u2023', u'\u25cf', u'\u25cb']:
+            pdf.set_font('Arial', '', 11)
+            pdf.set_text_color(0, 0, 0)
+            bullet_text = stripped[2:] if stripped[1] == ' ' else stripped[1:]
+            pdf.multi_cell(0, 7, "   - " + bullet_text)
+
+        # Numbered lists
+        elif len(stripped) > 2 and stripped[0].isdigit() and (stripped[1] == '.' or (stripped[1].isdigit() and stripped[2] == '.')):
+            pdf.set_font('Arial', '', 11)
+            pdf.set_text_color(0, 0, 0)
+            pdf.multi_cell(0, 7, stripped)
+
+        # Empty line
+        elif stripped == '':
+            pdf.ln(4)
+
+        # Regular text
+        else:
+            pdf.set_font('Arial', '', 11)
+            pdf.set_text_color(0, 0, 0)
+            pdf.multi_cell(0, 7, clean_line)
+
+    return pdf
+
+
 @app.route('/download-notes-pdf', methods=['POST'])
 @csrf.exempt
 @login_required
 def download_notes_pdf():
-    """Generate a PDF from the comprehensive notes"""
+    """Generate a professional PDF from the comprehensive notes"""
     try:
         data = request.json
         if not data:
@@ -922,70 +1126,38 @@ def download_notes_pdf():
 
         notes = data.get('notes', '')
         filename = data.get('filename', 'notes')
+        title = data.get('title', None)  # Optional custom title
+        website = data.get('website', 'PDF MCQ Generator')
 
         if not notes or notes.strip() == '':
             return jsonify({'error': 'No notes content provided'}), 400
 
-        print(f"Generating PDF for notes: {len(notes)} characters")
+        print(f"Generating professional PDF for notes: {len(notes)} characters")
 
-        # Create PDF with proper formatting
-        pdf = FPDF()
-        pdf.set_auto_page_break(auto=True, margin=15)
-        pdf.add_page()
+        clean_filename = filename.replace('.pdf', '') if filename else 'notes'
 
-        # Add title
-        pdf.set_font("Arial", 'B', 16)
-        pdf.cell(0, 10, "Comprehensive Academic Notes", 0, 1, 'C')
-        pdf.ln(3)
-
-        # Add source filename
-        pdf.set_font("Arial", 'I', 10)
-        clean_filename = filename.replace('.pdf', '') if filename else 'Unknown'
-        pdf.cell(0, 8, f"Source: {clean_filename}", 0, 1, 'C')
-        pdf.ln(10)
-
-        # Add notes content
-        pdf.set_font("Arial", size=11)
-
-        # Process the notes text - handle special characters and formatting
-        lines = notes.split('\n')
-        for line in lines:
-            # Clean the line of problematic characters
-            clean_line = line.encode('latin-1', errors='replace').decode('latin-1')
-
-            # Handle headers (lines starting with # or containing bold markers)
-            if clean_line.strip().startswith('#'):
-                # Remove markdown headers and make bold
-                header_text = clean_line.strip().lstrip('#').strip()
-                pdf.set_font("Arial", 'B', 13)
-                pdf.multi_cell(0, 8, header_text)
-                pdf.set_font("Arial", size=11)
-            elif clean_line.strip().startswith('**') and clean_line.strip().endswith('**'):
-                # Bold text
-                bold_text = clean_line.strip().strip('*').strip()
-                pdf.set_font("Arial", 'B', 11)
-                pdf.multi_cell(0, 7, bold_text)
-                pdf.set_font("Arial", size=11)
-            elif clean_line.strip() == '':
-                # Empty line - add small spacing
-                pdf.ln(3)
-            else:
-                # Regular text
-                pdf.multi_cell(0, 7, clean_line)
-
-        # Create PDF in memory
-        pdf_buffer = BytesIO()
         try:
-            pdf_string = pdf.output(dest='S')
+            # Create professional PDF
+            pdf = create_professional_notes_pdf(
+                notes=notes,
+                filename=filename,
+                title=title,
+                website=website
+            )
 
-            if not pdf_string:
+            # Output PDF to buffer
+            pdf_buffer = BytesIO()
+            pdf_output = pdf.output(dest='S')
+
+            if not pdf_output:
                 print("Error: PDF generation returned empty content")
                 return jsonify({'error': 'PDF generation failed - empty content'}), 500
 
-            if isinstance(pdf_string, str):
-                pdf_buffer.write(pdf_string.encode('latin-1'))
+            if isinstance(pdf_output, str):
+                pdf_buffer.write(pdf_output.encode('latin-1'))
             else:
-                pdf_buffer.write(pdf_string)
+                pdf_buffer.write(pdf_output)
+
             pdf_buffer.seek(0)
 
             # Verify PDF content
@@ -994,19 +1166,29 @@ def download_notes_pdf():
                 print("Error: PDF buffer is empty")
                 return jsonify({'error': 'PDF generation failed - 0 bytes generated'}), 500
 
-            print(f"Notes PDF generated successfully: {len(pdf_content)} bytes")
+            print(f"Professional Notes PDF generated successfully: {len(pdf_content)} bytes")
 
             download_filename = clean_filename + '_notes.pdf'
-            return send_file(
+
+            response = send_file(
                 pdf_buffer,
                 mimetype='application/pdf',
                 as_attachment=True,
                 download_name=download_filename
             )
 
-        except Exception as output_error:
-            print(f"Error generating notes PDF output: {output_error}")
-            return jsonify({'error': f'PDF generation failed: {output_error}'}), 500
+            # Add headers to prevent caching issues
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+
+            return response
+
+        except Exception as pdf_error:
+            print(f"Error generating professional PDF: {pdf_error}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'error': f'PDF generation failed: {str(pdf_error)}'}), 500
 
     except Exception as e:
         print(f"Error in download_notes_pdf: {e}")
