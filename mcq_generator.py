@@ -1281,7 +1281,8 @@ def generate_mcq_questions(text, num_questions=5, model_provider='openrouter', m
         if token_count > max_context_tokens:
             chunks = chunk_text(text, max_context_tokens)
             all_questions = []
-            questions_per_chunk = max(1, math.ceil(num_questions / len(chunks)))
+            # Cap questions per chunk at 5 to prevent token exhaustion and ensure complete answers
+            questions_per_chunk = min(5, max(1, math.ceil(num_questions / len(chunks))))
 
             # Process each chunk
             for i, chunk in enumerate(chunks):
@@ -1290,7 +1291,8 @@ def generate_mcq_questions(text, num_questions=5, model_provider='openrouter', m
                     remaining = num_questions - len(all_questions)
                     if remaining <= 0:
                         break
-                    questions_per_chunk = remaining
+                    # Still cap at 5 even for remaining questions
+                    questions_per_chunk = min(5, remaining)
 
                 chunk_prompt = f"""Generate exactly {questions_per_chunk} multiple-choice questions (MCQs) from the following text.
 
@@ -1366,10 +1368,10 @@ def generate_mcq_questions(text, num_questions=5, model_provider='openrouter', m
                     completion = client.chat.completions.create(
                         model=model,
                         messages=[
-                            {"role": "system", "content": "You are an expert educator specializing in government rules, regulations, and policy documents. You create high-quality MCQs with ONLY ONE correct answer per question. You MUST: 1) Ensure single correct answer under all circumstances, 2) Avoid conditional words like 'may', 'can', 'if required', 3) Include paragraph references for validation, 4) Make each option independently verifiable, 5) Skip questions if exclusivity cannot be guaranteed. Always respond with valid JSON."},
+                            {"role": "system", "content": "You are an expert educator specializing in government rules, regulations, and policy documents. You create high-quality MCQs with ONLY ONE correct answer per question. You MUST: 1) Ensure single correct answer under all circumstances, 2) Avoid conditional words like 'may', 'can', 'if required', 3) Include paragraph references for validation, 4) Make each option independently verifiable, 5) Skip questions if exclusivity cannot be guaranteed. CRITICAL: Every option MUST be a COMPLETE sentence - never truncate mid-sentence. Always respond with valid JSON."},
                             {"role": "user", "content": chunk_prompt}
                         ],
-                        max_tokens=4000,
+                        max_tokens=8000,
                         temperature=0.7,
                     )
                     response = completion.choices[0].message.content.strip()
@@ -1486,10 +1488,10 @@ def generate_mcq_questions(text, num_questions=5, model_provider='openrouter', m
             completion = client.chat.completions.create(
                 model=model,
                 messages=[
-                    {"role": "system", "content": "You are an expert educator specializing in government rules, regulations, and policy documents. You create high-quality MCQs with ONLY ONE correct answer per question. You MUST: 1) Ensure single correct answer under all circumstances, 2) Avoid conditional words like 'may', 'can', 'if required', 3) Include paragraph references for validation, 4) Make each option independently verifiable, 5) Skip questions if exclusivity cannot be guaranteed. Always respond with valid JSON."},
+                    {"role": "system", "content": "You are an expert educator specializing in government rules, regulations, and policy documents. You create high-quality MCQs with ONLY ONE correct answer per question. You MUST: 1) Ensure single correct answer under all circumstances, 2) Avoid conditional words like 'may', 'can', 'if required', 3) Include paragraph references for validation, 4) Make each option independently verifiable, 5) Skip questions if exclusivity cannot be guaranteed. CRITICAL: Every option MUST be a COMPLETE sentence - never truncate mid-sentence. Always respond with valid JSON."},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=4000,
+                max_tokens=8000,
                 temperature=0.7,
             )
             response = completion.choices[0].message.content.strip()
@@ -1578,7 +1580,8 @@ def generate_mcq_questions_advanced(text, num_questions=5, difficulty='medium', 
         if token_count > max_context_tokens:
             chunks = chunk_text(text, max_context_tokens)
             all_questions = []
-            questions_per_chunk = max(1, math.ceil(num_questions / len(chunks)))
+            # Cap questions per chunk at 5 to prevent token exhaustion and ensure complete answers
+            questions_per_chunk = min(5, max(1, math.ceil(num_questions / len(chunks))))
 
             # Process each chunk
             for i, chunk in enumerate(chunks):
@@ -1587,7 +1590,8 @@ def generate_mcq_questions_advanced(text, num_questions=5, difficulty='medium', 
                     remaining = num_questions - len(all_questions)
                     if remaining <= 0:
                         break
-                    questions_per_chunk = remaining
+                    # Still cap at 5 even for remaining questions
+                    questions_per_chunk = min(5, remaining)
 
                 chunk_prompt = f"""Generate exactly {questions_per_chunk} multiple-choice questions (MCQs) from the following text.
 
@@ -1637,6 +1641,14 @@ def generate_mcq_questions_advanced(text, num_questions=5, difficulty='medium', 
                    - Include correct answer letter
                    - Provide brief explanation WITH paragraph reference
                    - Format as valid JSON array
+
+                CRITICAL - COMPLETE SENTENCES:
+                   - EVERY option MUST be a COMPLETE sentence that ends properly
+                   - NEVER truncate or cut off options mid-sentence
+                   - If an option is long, complete it fully - do NOT abbreviate
+                   - Each option should be self-contained and grammatically complete
+                   - Example of WRONG: "The Association has been formed with the object of promoting the common..."
+                   - Example of RIGHT: "The Association has been formed with the object of promoting the common service interest of its members."
                 {explanation_instruction}{amendment_section}
 
                 JSON Structure:
@@ -1667,10 +1679,10 @@ def generate_mcq_questions_advanced(text, num_questions=5, difficulty='medium', 
                     completion = client.chat.completions.create(
                         model=model_name,
                         messages=[
-                            {"role": "system", "content": system_message},
+                            {"role": "system", "content": system_message + " CRITICAL: Every option MUST be a COMPLETE sentence - never truncate mid-sentence."},
                             {"role": "user", "content": chunk_prompt}
                         ],
-                        max_tokens=4000,
+                        max_tokens=8000,
                         temperature=0.7,
                     )
 
@@ -1748,6 +1760,14 @@ def generate_mcq_questions_advanced(text, num_questions=5, difficulty='medium', 
                - Include correct answer letter
                - Provide brief explanation WITH paragraph reference
                - Format as valid JSON array
+
+            CRITICAL - COMPLETE SENTENCES:
+               - EVERY option MUST be a COMPLETE sentence that ends properly
+               - NEVER truncate or cut off options mid-sentence
+               - If an option is long, complete it fully - do NOT abbreviate
+               - Each option should be self-contained and grammatically complete
+               - Example of WRONG: "The Association has been formed with the object of promoting the common..."
+               - Example of RIGHT: "The Association has been formed with the object of promoting the common service interest of its members."
             {explanation_instruction}
 
             JSON Structure:
@@ -1767,10 +1787,10 @@ def generate_mcq_questions_advanced(text, num_questions=5, difficulty='medium', 
             completion = client.chat.completions.create(
                 model=model_name,
                 messages=[
-                    {"role": "system", "content": "You are an expert educator specializing in government rules, regulations, and policy documents. You create high-quality MCQs with ONLY ONE correct answer per question. You MUST: 1) Ensure single correct answer under all circumstances, 2) Avoid conditional words like 'may', 'can', 'if required', 3) Include paragraph references for validation, 4) Make each option independently verifiable, 5) Skip questions if exclusivity cannot be guaranteed. Always respond with valid JSON array format."},
+                    {"role": "system", "content": "You are an expert educator specializing in government rules, regulations, and policy documents. You create high-quality MCQs with ONLY ONE correct answer per question. You MUST: 1) Ensure single correct answer under all circumstances, 2) Avoid conditional words like 'may', 'can', 'if required', 3) Include paragraph references for validation, 4) Make each option independently verifiable, 5) Skip questions if exclusivity cannot be guaranteed. CRITICAL: Every option MUST be a COMPLETE sentence - never truncate mid-sentence. Always respond with valid JSON array format."},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=4000,
+                max_tokens=8000,
                 temperature=0.7,
             )
 
