@@ -942,8 +942,18 @@ class ProfessionalNotesPDF(FPDF):
 def create_professional_notes_pdf(notes, filename, title=None, website="www.example.com"):
     """
     Create a professional PDF with cover page and formatted content.
-    Style inspired by professional study materials.
+    Style inspired by professional government exam study materials.
+
+    Features:
+    - Professional cover page with disclaimer
+    - Rule-wise formatting with proper indentation
+    - Table rendering with borders
+    - Flowchart display
+    - Exam-oriented section highlighting
+    - Proper text alignment and spacing
     """
+    import re
+
     clean_filename = filename.replace('.pdf', '') if filename else 'Study Notes'
     doc_title = title if title else clean_filename
 
@@ -957,63 +967,75 @@ def create_professional_notes_pdf(notes, filename, title=None, website="www.exam
     pdf.add_page()
 
     # Title area - centered
-    pdf.ln(40)
+    pdf.ln(35)
 
     # Main title
-    pdf.set_font('Arial', 'B', 28)
+    pdf.set_font('Arial', 'B', 26)
     pdf.set_text_color(0, 51, 102)
-    pdf.cell(0, 15, "Study Notes", 0, 1, 'C')
+    pdf.cell(0, 12, "STUDY NOTES", 0, 1, 'C')
 
     # Subtitle
-    pdf.set_font('Arial', 'I', 14)
-    pdf.set_text_color(100, 100, 100)
-    pdf.cell(0, 10, "A Self Learning Portal", 0, 1, 'C')
-
-    # Website
-    pdf.set_font('Arial', 'B', 12)
-    pdf.set_text_color(0, 102, 204)
-    pdf.cell(0, 10, website, 0, 1, 'C')
-
-    # Document Title
-    pdf.ln(30)
-    pdf.set_font('Arial', 'B', 24)
-    pdf.set_text_color(204, 51, 51)
-    # Handle long titles
-    if len(doc_title) > 40:
-        pdf.multi_cell(0, 12, doc_title, 0, 'C')
-    else:
-        pdf.cell(0, 12, doc_title, 0, 1, 'C')
+    pdf.set_font('Arial', 'I', 12)
+    pdf.set_text_color(80, 80, 80)
+    pdf.cell(0, 8, "Self Learning Material", 0, 1, 'C')
 
     # Decorative line
-    pdf.ln(10)
-    pdf.set_draw_color(0, 102, 204)
-    pdf.set_line_width(1)
-    pdf.line(50, pdf.get_y(), 160, pdf.get_y())
     pdf.ln(5)
-    pdf.set_draw_color(204, 51, 51)
-    pdf.line(60, pdf.get_y(), 150, pdf.get_y())
+    pdf.set_draw_color(0, 102, 204)
+    pdf.set_line_width(1.5)
+    pdf.line(40, pdf.get_y(), 170, pdf.get_y())
+
+    # Document Title Box
+    pdf.ln(20)
+    pdf.set_fill_color(240, 248, 255)  # Light blue background
+    pdf.set_draw_color(0, 102, 204)
+    pdf.rect(20, pdf.get_y(), 170, 35, 'DF')
+
+    pdf.set_xy(25, pdf.get_y() + 8)
+    pdf.set_font('Arial', 'B', 16)
+    pdf.set_text_color(0, 51, 102)
+    # Clean title of special characters
+    clean_title = doc_title.encode('latin-1', errors='replace').decode('latin-1')
+    pdf.multi_cell(160, 10, clean_title, 0, 'C')
+
+    # Website
+    pdf.ln(25)
+    pdf.set_font('Arial', 'B', 11)
+    pdf.set_text_color(0, 102, 204)
+    pdf.cell(0, 8, website, 0, 1, 'C')
+
+    # Target Audience Section
+    pdf.ln(10)
+    pdf.set_font('Arial', 'B', 11)
+    pdf.set_text_color(0, 0, 0)
+    pdf.cell(0, 8, "Prepared For:", 0, 1, 'C')
+
+    pdf.set_font('Arial', '', 10)
+    pdf.set_text_color(60, 60, 60)
+    pdf.cell(0, 6, "DDO | Accounts Officers | Audit Officers | Exam Aspirants", 0, 1, 'C')
 
     # Disclaimer box at bottom
-    pdf.set_y(-70)
-    pdf.set_draw_color(204, 102, 0)
-    pdf.set_fill_color(255, 255, 255)
-    pdf.rect(15, pdf.get_y(), 180, 40, 'D')
+    pdf.set_y(-75)
+    pdf.set_draw_color(180, 0, 0)
+    pdf.set_fill_color(255, 250, 250)
+    pdf.rect(15, pdf.get_y(), 180, 45, 'DF')
 
-    pdf.set_xy(18, pdf.get_y() + 3)
-    pdf.set_font('Arial', 'B', 9)
-    pdf.set_text_color(204, 51, 51)
-    pdf.cell(0, 5, "DISCLAIMER:", 0, 1)
+    pdf.set_xy(18, pdf.get_y() + 5)
+    pdf.set_font('Arial', 'B', 10)
+    pdf.set_text_color(180, 0, 0)
+    pdf.cell(0, 6, "DISCLAIMER", 0, 1)
 
     pdf.set_x(18)
-    pdf.set_font('Arial', 'I', 8)
-    pdf.set_text_color(100, 100, 100)
+    pdf.set_font('Arial', '', 9)
+    pdf.set_text_color(60, 60, 60)
     disclaimer_text = (
-        "These notes have been prepared for educational purposes. While every effort "
-        "has been made to ensure accuracy, this document is intended as a study aid only. "
-        "Readers are recommended to refer to official sources for the most reliable and "
-        "authoritative information."
+        "These notes have been prepared for educational purposes only. While every effort "
+        "has been made to ensure accuracy, this document is intended as a study aid. "
+        "Readers are advised to refer to official government gazettes and circulars for "
+        "authoritative information. The creator is not responsible for any errors or "
+        "omissions. Always verify with original sources before official use."
     )
-    pdf.multi_cell(174, 4, disclaimer_text, 0, 'J')
+    pdf.multi_cell(172, 5, disclaimer_text, 0, 'J')
 
     # ============================================
     # CONTENT PAGES
@@ -1028,90 +1050,333 @@ def create_professional_notes_pdf(notes, filename, title=None, website="www.exam
     # Process the notes text
     lines = notes.split('\n')
 
-    for line in lines:
+    # State tracking for tables
+    in_table = False
+    table_rows = []
+    table_col_widths = []
+
+    i = 0
+    while i < len(lines):
+        line = lines[i]
         # Clean the line of problematic characters
         clean_line = line.encode('latin-1', errors='replace').decode('latin-1')
+        # Replace common problematic characters
+        clean_line = clean_line.replace('?', '-').replace('', '-').replace('', "'")
         stripped = clean_line.strip()
 
         # Always reset X position to left margin before each line
         pdf.set_x(pdf.l_margin)
 
-        # Detect chapter headings (CHAPTER I, CHAPTER II, etc.)
-        if stripped.upper().startswith('CHAPTER') or stripped.upper().startswith('PART'):
+        # ============================================
+        # TABLE DETECTION AND RENDERING
+        # ============================================
+        if stripped.startswith('|') and stripped.endswith('|'):
+            if not in_table:
+                in_table = True
+                table_rows = []
+
+            # Parse table row
+            cells = [c.strip() for c in stripped.split('|')[1:-1]]
+
+            # Skip separator rows (|---|---|---|)
+            if cells and all(re.match(r'^[-:]+$', c) for c in cells):
+                i += 1
+                continue
+
+            table_rows.append(cells)
+            i += 1
+            continue
+
+        elif in_table:
+            # End of table - render it
+            in_table = False
+            if table_rows:
+                pdf.ln(3)
+                render_table(pdf, table_rows)
+                pdf.ln(5)
+            table_rows = []
+
+        # ============================================
+        # RULE HEADINGS (RULE 1, Rule 2, etc.)
+        # ============================================
+        rule_match = re.match(r'^(RULE\s*\d+|Rule\s*\d+)\s*[-:.]?\s*(.*)$', stripped, re.IGNORECASE)
+        if rule_match:
             pdf.ln(8)
-            pdf.set_font('Arial', 'B', 14)
-            pdf.set_text_color(0, 102, 204)  # Blue
-            pdf.multi_cell(0, 8, stripped)
-            pdf.set_text_color(0, 0, 0)
+            # Draw a subtle top border for the rule
+            pdf.set_draw_color(0, 102, 204)
+            pdf.set_line_width(0.5)
+            pdf.line(15, pdf.get_y(), 195, pdf.get_y())
             pdf.ln(3)
 
-        # Detect section headings (Section X. or lines with "Section")
-        elif stripped.lower().startswith('section') or (stripped.startswith('**') and 'section' in stripped.lower()):
+            pdf.set_font('Arial', 'B', 13)
+            pdf.set_text_color(0, 51, 102)
+            rule_title = f"{rule_match.group(1).upper()} - {rule_match.group(2)}" if rule_match.group(2) else rule_match.group(1).upper()
+            pdf.multi_cell(0, 8, rule_title)
+            pdf.set_text_color(0, 0, 0)
+            pdf.ln(2)
+            i += 1
+            continue
+
+        # ============================================
+        # CHAPTER/PART HEADINGS
+        # ============================================
+        if stripped.upper().startswith('CHAPTER') or stripped.upper().startswith('PART'):
+            pdf.add_page()  # Start new page for chapters
+            pdf.set_font('Arial', 'B', 16)
+            pdf.set_text_color(0, 51, 102)
+            pdf.set_fill_color(230, 240, 250)
+            pdf.cell(0, 12, stripped.upper(), 0, 1, 'C', True)
+            pdf.set_text_color(0, 0, 0)
+            pdf.ln(5)
+            i += 1
+            continue
+
+        # ============================================
+        # EXAM HIGHLIGHTS / IMPORTANT SECTIONS
+        # ============================================
+        if any(keyword in stripped.upper() for keyword in ['EXAM HIGHLIGHT', 'IMPORTANT', 'KEY POINT', 'EXAM FOCUS', 'MCQ FOCUS', 'QUICK REVISION']):
+            pdf.ln(5)
+            pdf.set_fill_color(255, 255, 220)  # Light yellow
+            pdf.set_draw_color(200, 150, 0)
+            pdf.rect(15, pdf.get_y(), 180, 10, 'DF')
+            pdf.set_xy(18, pdf.get_y() + 2)
+            pdf.set_font('Arial', 'B', 11)
+            pdf.set_text_color(150, 100, 0)
+            header_text = stripped.strip('*#:').strip()
+            pdf.cell(174, 6, header_text.upper(), 0, 1, 'L')
+            pdf.set_text_color(0, 0, 0)
+            pdf.ln(3)
+            i += 1
+            continue
+
+        # ============================================
+        # FLOWCHART DETECTION (arrows)
+        # ============================================
+        if '->' in stripped or '-->' in stripped:
+            pdf.ln(3)
+            pdf.set_fill_color(245, 250, 255)
+            pdf.set_draw_color(100, 150, 200)
+
+            # Clean flowchart text
+            flow_text = stripped.replace('-->', ' --> ').replace('->', ' -> ')
+            flow_text = re.sub(r'\s+', ' ', flow_text).strip()
+
+            # Calculate height needed
+            text_width = pdf.get_string_width(flow_text)
+            lines_needed = max(1, int(text_width / 160) + 1)
+            box_height = lines_needed * 7 + 6
+
+            pdf.rect(15, pdf.get_y(), 180, box_height, 'DF')
+            pdf.set_xy(18, pdf.get_y() + 3)
+            pdf.set_font('Arial', 'I', 10)
+            pdf.set_text_color(50, 80, 120)
+            pdf.multi_cell(174, 7, flow_text, 0, 'C')
+            pdf.set_text_color(0, 0, 0)
+            pdf.ln(3)
+            i += 1
+            continue
+
+        # ============================================
+        # SECTION HEADINGS
+        # ============================================
+        if stripped.lower().startswith('section') or (stripped.startswith('**') and 'section' in stripped.lower()):
             pdf.ln(5)
             section_text = stripped.strip('*').strip()
             pdf.set_font('Arial', 'B', 12)
-            pdf.set_text_color(0, 102, 204)  # Blue
+            pdf.set_text_color(0, 102, 204)
             pdf.multi_cell(0, 7, section_text)
             pdf.set_text_color(0, 0, 0)
             pdf.ln(2)
+            i += 1
+            continue
 
-        # Detect main headers (lines starting with # or ##)
-        elif stripped.startswith('##'):
-            pdf.ln(6)
+        # ============================================
+        # MARKDOWN HEADERS (# and ##)
+        # ============================================
+        if stripped.startswith('###'):
+            pdf.ln(4)
             header_text = stripped.lstrip('#').strip()
-            pdf.set_font('Arial', 'B', 13)
-            pdf.set_text_color(0, 102, 204)  # Blue
+            pdf.set_font('Arial', 'B', 11)
+            pdf.set_text_color(0, 80, 150)
+            pdf.multi_cell(0, 7, header_text)
+            pdf.set_text_color(0, 0, 0)
+            pdf.ln(2)
+            i += 1
+            continue
+
+        if stripped.startswith('##'):
+            pdf.ln(5)
+            header_text = stripped.lstrip('#').strip()
+            pdf.set_font('Arial', 'B', 12)
+            pdf.set_text_color(0, 102, 204)
             pdf.multi_cell(0, 8, header_text)
             pdf.set_text_color(0, 0, 0)
             pdf.ln(2)
+            i += 1
+            continue
 
-        elif stripped.startswith('#'):
-            pdf.ln(8)
+        if stripped.startswith('#'):
+            pdf.ln(6)
             header_text = stripped.lstrip('#').strip()
             pdf.set_font('Arial', 'B', 14)
-            pdf.set_text_color(0, 102, 204)  # Blue
+            pdf.set_text_color(0, 51, 102)
             pdf.multi_cell(0, 8, header_text)
             pdf.set_text_color(0, 0, 0)
             pdf.ln(3)
+            i += 1
+            continue
 
-        # Bold text markers
-        elif stripped.startswith('**') and stripped.endswith('**'):
+        # ============================================
+        # BOLD TEXT MARKERS (**text**)
+        # ============================================
+        if stripped.startswith('**') and stripped.endswith('**'):
             bold_text = stripped.strip('*').strip()
             pdf.set_font('Arial', 'B', 11)
             pdf.set_text_color(0, 0, 0)
             pdf.multi_cell(0, 7, bold_text)
+            i += 1
+            continue
 
-        # Bullet points (use ASCII-safe bullet representation)
-        elif stripped.startswith('- ') or stripped.startswith('* '):
+        # ============================================
+        # BULLET POINTS
+        # ============================================
+        if stripped.startswith('- ') or stripped.startswith('* '):
             pdf.set_font('Arial', '', 11)
             pdf.set_text_color(0, 0, 0)
             bullet_text = stripped[2:]
-            pdf.multi_cell(0, 7, "   - " + bullet_text)
+            pdf.set_x(pdf.l_margin + 5)
+            pdf.multi_cell(0, 6, chr(149) + " " + bullet_text)  # Use bullet character
+            i += 1
+            continue
 
         # Unicode bullet points - convert to ASCII
-        elif len(stripped) > 2 and stripped[0] in [u'\u2022', u'\u2023', u'\u25cf', u'\u25cb']:
+        if len(stripped) > 2 and stripped[0] in ['\u2022', '\u2023', '\u25cf', '\u25cb', '\u2713', '\u2714']:
             pdf.set_font('Arial', '', 11)
             pdf.set_text_color(0, 0, 0)
             bullet_text = stripped[2:] if stripped[1] == ' ' else stripped[1:]
-            pdf.multi_cell(0, 7, "   - " + bullet_text)
+            pdf.set_x(pdf.l_margin + 5)
+            pdf.multi_cell(0, 6, chr(149) + " " + bullet_text)
+            i += 1
+            continue
 
-        # Numbered lists
-        elif len(stripped) > 2 and stripped[0].isdigit() and (stripped[1] == '.' or (stripped[1].isdigit() and stripped[2] == '.')):
-            pdf.set_font('Arial', '', 11)
-            pdf.set_text_color(0, 0, 0)
-            pdf.multi_cell(0, 7, stripped)
+        # ============================================
+        # NUMBERED LISTS
+        # ============================================
+        if len(stripped) > 2 and stripped[0].isdigit():
+            if stripped[1] == '.' or (len(stripped) > 2 and stripped[1].isdigit() and stripped[2] == '.'):
+                pdf.set_font('Arial', '', 11)
+                pdf.set_text_color(0, 0, 0)
+                pdf.set_x(pdf.l_margin + 3)
+                pdf.multi_cell(0, 6, stripped)
+                i += 1
+                continue
 
-        # Empty line
-        elif stripped == '':
-            pdf.ln(4)
+        # ============================================
+        # EMPTY LINE
+        # ============================================
+        if stripped == '':
+            pdf.ln(3)
+            i += 1
+            continue
 
-        # Regular text
-        else:
-            pdf.set_font('Arial', '', 11)
-            pdf.set_text_color(0, 0, 0)
-            pdf.multi_cell(0, 7, clean_line)
+        # ============================================
+        # SEPARATOR LINES (===, ---, etc.)
+        # ============================================
+        if re.match(r'^[=\-_]{3,}$', stripped):
+            pdf.ln(2)
+            pdf.set_draw_color(150, 150, 150)
+            pdf.set_line_width(0.3)
+            pdf.line(30, pdf.get_y(), 180, pdf.get_y())
+            pdf.ln(3)
+            i += 1
+            continue
+
+        # ============================================
+        # REGULAR TEXT
+        # ============================================
+        pdf.set_font('Arial', '', 11)
+        pdf.set_text_color(0, 0, 0)
+        pdf.multi_cell(0, 6, clean_line)
+        i += 1
+
+    # Handle any remaining table
+    if in_table and table_rows:
+        render_table(pdf, table_rows)
 
     return pdf
+
+
+def render_table(pdf, rows):
+    """
+    Render a table with proper borders and alignment.
+    """
+    if not rows:
+        return
+
+    # Calculate column widths based on content
+    num_cols = max(len(row) for row in rows)
+    if num_cols == 0:
+        return
+
+    # Available width (page width minus margins)
+    available_width = 180
+    col_width = available_width / num_cols
+
+    # Limit column width to reasonable size
+    col_width = min(col_width, 60)
+
+    # Start position
+    start_x = pdf.l_margin
+
+    for row_idx, row in enumerate(rows):
+        # Determine if this is a header row (first row)
+        is_header = (row_idx == 0)
+
+        # Calculate row height based on content
+        max_lines = 1
+        for cell in row:
+            cell_text = str(cell).encode('latin-1', errors='replace').decode('latin-1')
+            text_width = pdf.get_string_width(cell_text)
+            lines_needed = max(1, int(text_width / (col_width - 4)) + 1)
+            max_lines = max(max_lines, lines_needed)
+
+        row_height = max_lines * 6 + 2
+
+        # Check if we need a new page
+        if pdf.get_y() + row_height > 270:
+            pdf.add_page()
+
+        # Set style for header vs data rows
+        if is_header:
+            pdf.set_fill_color(230, 240, 250)  # Light blue for header
+            pdf.set_font('Arial', 'B', 10)
+        else:
+            pdf.set_fill_color(255, 255, 255)  # White for data
+            pdf.set_font('Arial', '', 10)
+
+        pdf.set_draw_color(100, 100, 100)
+        pdf.set_text_color(0, 0, 0)
+
+        y_before = pdf.get_y()
+
+        # Draw cells
+        for col_idx, cell in enumerate(row):
+            x_pos = start_x + (col_idx * col_width)
+            cell_text = str(cell).encode('latin-1', errors='replace').decode('latin-1')
+
+            # Draw cell border and fill
+            pdf.rect(x_pos, y_before, col_width, row_height, 'DF' if is_header else 'D')
+
+            # Add cell text
+            pdf.set_xy(x_pos + 2, y_before + 1)
+            pdf.multi_cell(col_width - 4, 5, cell_text, 0, 'L')
+
+        # Handle cells that are fewer than num_cols
+        for col_idx in range(len(row), num_cols):
+            x_pos = start_x + (col_idx * col_width)
+            pdf.rect(x_pos, y_before, col_width, row_height, 'D')
+
+        pdf.set_y(y_before + row_height)
 
 
 @app.route('/download-notes-pdf', methods=['POST'])

@@ -392,6 +392,8 @@ def generate_comprehensive_notes(text, model_provider='openrouter', model_type='
     Generate EXHAUSTIVE, ERROR-FREE, AND COMPLETE NOTES from PDF content.
     Designed for academic/exam preparation with detailed rule-wise analysis.
 
+    Uses chunked processing to ensure ALL pages are covered, even for large documents.
+
     Args:
         text (str): Extracted text from PDF
         model_provider (str): AI provider to use
@@ -413,108 +415,206 @@ def generate_comprehensive_notes(text, model_provider='openrouter', model_type='
         else:
             model = get_model_name(model_provider, model_type)
 
-        system_prompt = """You are an expert academic note-maker, government-exam trainer, and documentation analyst.
-Your task is to prepare EXHAUSTIVE, ERROR-FREE, AND COMPLETE NOTES in paragraphs from the given PDF.
+        # Estimate tokens and determine if chunking is needed
+        total_tokens = estimate_token_count(text)
+        # Use conservative context limit to leave room for prompts and responses
+        max_context_tokens = 60000  # Safe limit for most models
 
-⚠️ IMPORTANT:
-- Do NOT summarize loosely
-- Do NOT omit even a single rule, note, explanation, proviso, example, government decision, footnote, appendix, or exception
+        print(f"📝 Generating comprehensive notes with model: {model}")
+        print(f"📊 Processing {len(text)} characters ({total_tokens} estimated tokens)...")
+
+        system_prompt = """You are an expert academic note-maker, government-exam trainer, and documentation analyst.
+Your task is to prepare EXHAUSTIVE, ERROR-FREE, AND COMPLETE NOTES from the given document section.
+
+CRITICAL INSTRUCTIONS:
+- Do NOT summarize loosely - cover EVERY rule, provision, and detail
+- Do NOT omit any rule, note, explanation, proviso, example, or exception
 - Every rule number, sub-rule, NOTE, and reference must be preserved
+- Use clean ASCII characters only - avoid special symbols like emojis
+- Format for professional PDF printing
 
 These notes will be used for:
-- Daily reference
+- Daily reference by government officers
 - Competitive & departmental examinations
-- Revision before tests"""
+- Quick revision before tests"""
 
-        user_prompt = f"""📘 DOCUMENT HANDLING INSTRUCTIONS
-- Process the PDF chapter-by-chapter and rule-by-rule
+        # Check if text needs to be chunked
+        if total_tokens > max_context_tokens:
+            print(f"📚 Document too large ({total_tokens} tokens), processing in chunks...")
+
+            # Create overlapping chunks to ensure continuity
+            chunks = chunk_text(text, max_tokens=50000, overlap_tokens=1000)
+            print(f"📄 Split into {len(chunks)} chunks for processing")
+
+            all_notes = []
+
+            for i, chunk in enumerate(chunks):
+                chunk_num = i + 1
+                is_first = (i == 0)
+                is_last = (i == len(chunks) - 1)
+
+                # Adjust prompt based on chunk position
+                if is_first:
+                    chunk_instruction = f"""This is PART {chunk_num} of {len(chunks)} of the document.
+
+START with:
+1. Document Title and Overview
+2. Purpose of the Rules/Document
+3. Who Should Study This (DDO, Accounts Officer, Audit Officer, Exam Aspirants)
+4. Key Concepts Introduction
+
+Then process all rules/sections in this part EXHAUSTIVELY."""
+
+                elif is_last:
+                    chunk_instruction = f"""This is the FINAL PART ({chunk_num} of {len(chunks)}) of the document.
+
+Process all remaining rules/sections EXHAUSTIVELY.
+
+END with:
+1. QUICK REVISION SHEET - One page summary of key points
+2. EXAM FOCUS AREAS - Most important rules for exams
+3. COMMON MISTAKES TO AVOID
+4. MCQ-PRONE AREAS"""
+
+                else:
+                    chunk_instruction = f"""This is PART {chunk_num} of {len(chunks)} of the document.
+
+Continue processing all rules/sections in this part EXHAUSTIVELY.
+Maintain continuity with previous sections."""
+
+                user_prompt = f"""{chunk_instruction}
+
+NOTE-MAKING FORMAT (MANDATORY):
+
+RULE [Number] - [Title]
+Rule Text: [Exact text simplified but complete]
+Key Points:
+- Point 1
+- Point 2
+Explanation: [Clear explanation in simple language]
+Important for Exam: [Why this rule matters]
+Reference: [Any cross-references to other rules]
+
+After every 2-3 rules, add:
+TABLE: Key comparison or summary table
+| Column 1 | Column 2 | Column 3 |
+|----------|----------|----------|
+| Data     | Data     | Data     |
+
+FLOWCHART (text-based):
+Step 1 -> Step 2 -> Step 3 -> Step 4
+
+EXAM HIGHLIGHTS after each section:
+- Most important provisions
+- Frequently confused areas
+- Common exam questions
+
+---
+DOCUMENT SECTION TO PROCESS:
+{chunk}"""
+
+                # Determine max tokens based on model
+                max_tokens = 16000 if 'deepseek' in model.lower() else 8000
+
+                print(f"📤 Processing chunk {chunk_num}/{len(chunks)}...")
+
+                # Add rate limiting delay
+                delay = get_rate_limit_delay(model, chunk_num)
+                if delay > 0:
+                    print(f"⏳ Rate limit delay: waiting {delay} seconds...")
+                    time.sleep(delay)
+
+                try:
+                    completion = client.chat.completions.create(
+                        model=model,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt}
+                        ],
+                        max_tokens=max_tokens,
+                        temperature=0.3,
+                    )
+
+                    chunk_notes = completion.choices[0].message.content.strip()
+                    all_notes.append(chunk_notes)
+                    print(f"✅ Chunk {chunk_num}/{len(chunks)} completed: {len(chunk_notes)} characters")
+
+                except Exception as chunk_error:
+                    print(f"⚠️  Error processing chunk {chunk_num}: {chunk_error}")
+                    all_notes.append(f"\n\n[Note: Section {chunk_num} could not be processed - {str(chunk_error)}]\n\n")
+
+            # Combine all notes with clear section separators
+            combined_notes = "\n\n" + "="*60 + "\n\n".join(all_notes)
+            print(f"✅ Generated {len(combined_notes)} characters of comprehensive notes from {len(chunks)} chunks")
+            return combined_notes
+
+        else:
+            # Single chunk processing for smaller documents
+            user_prompt = f"""DOCUMENT HANDLING INSTRUCTIONS:
+- Process the document chapter-by-chapter and rule-by-rule
 - Maintain original numbering (Chapter, Rule, Sub-rule, Notes)
 - Preserve exact legal/technical meaning
-- Use simple language ONLY for explanation, not for altering rules
+- Use simple language for explanation, not for altering rules
 
-🧠 NOTE-MAKING STRUCTURE (MANDATORY)
+NOTE-MAKING STRUCTURE (MANDATORY):
 
-For EVERY chapter, follow this exact format:
-
-🔹 CHAPTER OVERVIEW
+CHAPTER OVERVIEW (for each chapter):
 - Purpose of the chapter
-- Who should study it (DDO / Accounts / Audit / Exam point of view)
-- Key financial concepts involved
+- Who should study it (DDO / Accounts / Audit / Exam aspirants)
+- Key concepts involved
 
-🔹 DETAILED NOTES (RULE-WISE)
-For each Rule, present information as:
-📌 Rule Number & Title
-- Exact rule text (simplified but complete)
-- Break into bullet points wherever required
-- Highlight keywords in bold
-- Mention: Authority, Time limits, Financial powers, Conditions, Exceptions, Cross-references to other rules
+DETAILED NOTES (RULE-WISE):
+For each Rule:
+RULE [Number] - [Title]
+Rule Text: [Exact text simplified but complete]
+Key Points:
+- Point 1 with explanation
+- Point 2 with explanation
+Authority: [Who has the power]
+Time Limits: [If applicable]
+Conditions: [Key conditions]
+Exceptions: [Important exceptions]
+Cross-References: [Related rules]
 
-🔹 STUDY TOOLS (VERY IMPORTANT)
-After every 2–3 rules, add:
-📊 TABLES - Example formats:
+STUDY TOOLS (after every 2-3 rules):
+TABLE:
 | Rule No | Subject | Authority | Time Limit | Key Condition |
-| Situation | What is Allowed | What is Prohibited |
+|---------|---------|-----------|------------|---------------|
 
-🔁 FLOWCHARTS (TEXT-BASED) - Example:
-Claim Raised → Verification → Sanction → Audit → Payment → Record Entry
+FLOWCHART:
+Step 1 -> Step 2 -> Step 3 -> Step 4
 
-🔹 EXAM-ORIENTED SECTION (VERY IMPORTANT)
-After each chapter, add:
-📝 EXAM HIGHLIGHTS
+EXAM-ORIENTED SECTION (after each chapter):
+EXAM HIGHLIGHTS:
 - Most important rules
 - Frequently confused provisions
 - Common mistakes by students
-- Areas from which MCQs are framed
+- MCQ focus areas
 
-🔹 QUICK REVISION SHEET (END OF CHAPTER)
-- One-page ultra-summary
-- Rule numbers only
-- Tables only
-- "Must-remember points"
-
-📚 APPENDICES & ANNEXURES HANDLING
-- Treat Appendices as equally important
-- Convert: Lists → Tables, Procedures → Flowcharts, Conditions → Comparison charts
-
-⚠️ QUALITY CONTROL CHECK
-Before finalizing notes:
-✔ No rule skipped
-✔ No appendix skipped
-✔ No note or proviso skipped
-✔ All numerical limits preserved
-✔ Language is exam-friendly but legally accurate
-
-📤 OUTPUT FORMAT
-- Use clear headings
-- Use numbering
-- Use tables frequently
-- Make it suitable for: PDF printing, Daily revision, One-night exam revision
-
-🔥 PRO TIP: If content is too long, continue automatically from where you stopped without repeating.
+QUICK REVISION SHEET (at the end):
+- One-page summary
+- Key rule numbers and their essence
+- Must-remember points
 
 ---
 DOCUMENT CONTENT TO PROCESS:
 {text}"""
 
-        # For comprehensive notes, we need much higher token limit
-        max_tokens = 16000 if 'deepseek' in model.lower() else 8000
+            max_tokens = 16000 if 'deepseek' in model.lower() else 8000
 
-        print(f"📝 Generating comprehensive notes with model: {model}")
-        print(f"📊 Processing {len(text)} characters of text...")
+            completion = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                max_tokens=max_tokens,
+                temperature=0.3,
+            )
 
-        completion = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            max_tokens=max_tokens,
-            temperature=0.3,  # Lower temperature for more accurate/consistent output
-        )
-
-        notes = completion.choices[0].message.content.strip()
-        print(f"✅ Generated {len(notes)} characters of comprehensive notes")
-        return notes
+            notes = completion.choices[0].message.content.strip()
+            print(f"✅ Generated {len(notes)} characters of comprehensive notes")
+            return notes
 
     except Exception as e:
         print(f"⚠️  Error generating comprehensive notes: {e}")
