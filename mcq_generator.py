@@ -435,6 +435,16 @@ ABSOLUTE REQUIREMENTS - VIOLATION IS NOT ALLOWED:
 6. Use clean ASCII characters only - avoid special symbols like emojis
 7. Do NOT use ** for bold - use plain text with UPPERCASE for emphasis
 8. Format for professional PDF printing
+9. MUST include FLOWCHARTS using arrow notation (->)
+
+FLOWCHART REQUIREMENT (MANDATORY):
+- Include at least 2-3 flowcharts per document
+- Use ONLY this arrow format: Step 1 -> Step 2 -> Step 3 -> Step 4
+- Flowcharts should show: procedures, application processes, approval chains, timelines
+- Example flowcharts to include:
+  * Application Process: Submit Application -> Verification -> Approval -> Grant
+  * Appeal Process: Grievance -> Review -> Decision -> Implementation
+  * Recognition Process: Association Formed -> Application Filed -> Scrutiny -> Recognition Granted
 
 FORBIDDEN PHRASES (NEVER USE THESE):
 - "Continued for subsequent sections"
@@ -512,8 +522,18 @@ After every 2-3 rules, add a comparison table:
 | Rule No | Subject | Key Condition |
 |---------|---------|---------------|
 
-Include FLOWCHART where applicable:
+MANDATORY FLOWCHARTS (include at least 2 per section):
+Use this exact arrow format for flowcharts:
+
+FLOWCHART - Process Name:
 Step 1 -> Step 2 -> Step 3 -> Step 4
+
+Examples of flowcharts you MUST include:
+- Application submission process
+- Approval/decision chain
+- Appeal/grievance procedure
+- Recognition/registration workflow
+- Timeline of events
 
 EXAM HIGHLIGHTS after each major section:
 - Key provisions for exam
@@ -522,6 +542,7 @@ EXAM HIGHLIGHTS after each major section:
 
 REMEMBER: Do NOT use ** for bold. Use UPPERCASE for emphasis.
 REMEMBER: Do NOT write "continued for subsequent sections" - complete ALL rules in this section.
+REMEMBER: Include FLOWCHARTS using the -> arrow format - this is MANDATORY.
 
 ---
 DOCUMENT SECTION TO PROCESS (cover every rule below):
@@ -618,8 +639,17 @@ TABLE:
 | Rule No | Subject | Authority | Time Limit | Key Condition |
 |---------|---------|-----------|------------|---------------|
 
-FLOWCHART:
+MANDATORY FLOWCHARTS (include at least 2-3 in the document):
+Use this exact arrow format:
+
+FLOWCHART - Process Name:
 Step 1 -> Step 2 -> Step 3 -> Step 4
+
+Examples of flowcharts to include:
+- Application Process: Submit -> Verify -> Approve -> Grant
+- Appeal Process: Grievance -> Review -> Decision -> Implementation
+- Recognition Process: Form Association -> Apply -> Scrutiny -> Recognition
+- Any procedural steps in the rules
 
 EXAM-ORIENTED SECTION (after each chapter):
 EXAM HIGHLIGHTS:
