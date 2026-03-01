@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>PDF MCQ Generator-sathish v2.1.0</title>
+    <title>Dakshin Postal Academy - PDF MCQ Generator</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -214,7 +214,7 @@
 </head>
 <body>
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-        <h1 style="margin: 0;">PDF MCQ Generator-sathish</h1>
+        <h1 style="margin: 0; color: #003366;">🏛️ Dakshin Postal Academy</h1>
         <div style="display: flex; align-items: center; gap: 15px;">
             <span style="color: #666; font-size: 14px;">👤 {{ current_user.username }}</span>
             <a href="{{ url_for('logout') }}" style="background-color: #f44336; color: white; padding: 8px 16px; text-decoration: none; border-radius: 5px; font-size: 14px; font-weight: bold;">🚪 Logout</a>
@@ -299,6 +299,36 @@
 
             <!-- Summarize Mode Section -->
             <div id="summarizeModeSection" style="display: none;">
+                <!-- Prepared For - Target Audience Selection -->
+                <div style="background-color: #e8f4fc; padding: 15px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #b3d7f0;">
+                    <label style="font-weight: bold; display: block; margin-bottom: 10px;">📋 Prepared For (Select target audience for PDF):</label>
+                    <div style="display: flex; flex-wrap: wrap; gap: 15px;">
+                        <label style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="checkbox" name="preparedFor" value="Group B" style="margin-right: 5px;" checked>
+                            Group B
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="checkbox" name="preparedFor" value="Inspector" style="margin-right: 5px;" checked>
+                            Inspector
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="checkbox" name="preparedFor" value="Postal Assistant" style="margin-right: 5px;">
+                            Postal Assistant
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="checkbox" name="preparedFor" value="Postman" style="margin-right: 5px;">
+                            Postman
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="checkbox" name="preparedFor" value="MTS" style="margin-right: 5px;">
+                            MTS
+                        </label>
+                    </div>
+                    <p style="font-size: 0.85em; color: #666; margin-top: 8px; margin-bottom: 0;">
+                        ℹ️ Selected options will appear on the PDF cover page under "Prepared For"
+                    </p>
+                </div>
+
                 <!-- AI Model Configuration for Summarize -->
                 <label for="summarizeModelProvider">AI Model Provider:</label>
                 <select id="summarizeModelProvider" name="summarizeModelProvider" onchange="updateSummarizeModelOptions()">
@@ -1052,6 +1082,16 @@
                 return;
             }
 
+            // Get selected "Prepared For" options
+            const preparedForCheckboxes = document.querySelectorAll('input[name="preparedFor"]:checked');
+            const preparedFor = Array.from(preparedForCheckboxes).map(cb => cb.value);
+
+            // Show loading state
+            const downloadBtn = event.target;
+            const originalText = downloadBtn.innerHTML;
+            downloadBtn.innerHTML = '⏳ Generating PDF...';
+            downloadBtn.disabled = true;
+
             fetch('/download-notes-pdf', {
                 method: 'POST',
                 headers: {
@@ -1059,16 +1099,28 @@
                 },
                 body: JSON.stringify({
                     notes: summaryText,
-                    filename: filename
+                    filename: filename,
+                    website: 'Dakshin Postal Academy',
+                    prepared_for: preparedFor
                 })
             })
             .then(response => {
                 if (!response.ok) {
-                    throw new Error('Network response was not ok');
+                    // Try to get error message from response
+                    return response.json().then(err => {
+                        throw new Error(err.error || 'Network response was not ok');
+                    }).catch(() => {
+                        throw new Error('Failed to generate PDF. Please try again.');
+                    });
                 }
                 return response.blob();
             })
             .then(blob => {
+                // Verify blob size
+                if (blob.size === 0) {
+                    throw new Error('Generated PDF is empty');
+                }
+
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.style.display = 'none';
@@ -1076,12 +1128,25 @@
                 a.download = filename.replace('.pdf', '') + '_notes.pdf';
                 document.body.appendChild(a);
                 a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
+
+                // Cleanup
+                setTimeout(() => {
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                }, 100);
+
+                // Success feedback
+                downloadBtn.innerHTML = '✅ Downloaded!';
+                setTimeout(() => {
+                    downloadBtn.innerHTML = originalText;
+                    downloadBtn.disabled = false;
+                }, 2000);
             })
             .catch(error => {
                 console.error('Error downloading PDF:', error);
-                alert('Error downloading PDF. Please try again.');
+                alert('Error downloading PDF: ' + error.message);
+                downloadBtn.innerHTML = originalText;
+                downloadBtn.disabled = false;
             });
         }
 

@@ -939,7 +939,7 @@ class ProfessionalNotesPDF(FPDF):
             self.cell(50, 10, self.website, 0, 0, 'R')
 
 
-def create_professional_notes_pdf(notes, filename, title=None, website="www.example.com"):
+def create_professional_notes_pdf(notes, filename, title=None, website="Dakshin Postal Academy", prepared_for=None):
     """
     Create a professional PDF with cover page and formatted content.
     Style inspired by professional government exam study materials.
@@ -951,6 +951,13 @@ def create_professional_notes_pdf(notes, filename, title=None, website="www.exam
     - Flowchart display
     - Exam-oriented section highlighting
     - Proper text alignment and spacing
+
+    Args:
+        notes: The notes content
+        filename: Output filename
+        title: Document title
+        website: Organization name (default: Dakshin Postal Academy)
+        prepared_for: List of target audiences (e.g., ['Group B', 'Inspector'])
     """
     import re
 
@@ -969,10 +976,10 @@ def create_professional_notes_pdf(notes, filename, title=None, website="www.exam
     # Title area - centered
     pdf.ln(35)
 
-    # Main title
+    # Main title - Organization name
     pdf.set_font('Arial', 'B', 26)
     pdf.set_text_color(0, 51, 102)
-    pdf.cell(0, 12, "STUDY NOTES", 0, 1, 'C')
+    pdf.cell(0, 12, website, 0, 1, 'C')
 
     # Subtitle
     pdf.set_font('Arial', 'I', 12)
@@ -998,13 +1005,13 @@ def create_professional_notes_pdf(notes, filename, title=None, website="www.exam
     clean_title = doc_title.encode('latin-1', errors='replace').decode('latin-1')
     pdf.multi_cell(160, 10, clean_title, 0, 'C')
 
-    # Website
+    # Website/Academy name
     pdf.ln(25)
     pdf.set_font('Arial', 'B', 11)
     pdf.set_text_color(0, 102, 204)
-    pdf.cell(0, 8, website, 0, 1, 'C')
+    pdf.cell(0, 8, "www.dakshinpostalacademy.com", 0, 1, 'C')
 
-    # Target Audience Section
+    # Target Audience Section - use provided list or default
     pdf.ln(10)
     pdf.set_font('Arial', 'B', 11)
     pdf.set_text_color(0, 0, 0)
@@ -1012,7 +1019,14 @@ def create_professional_notes_pdf(notes, filename, title=None, website="www.exam
 
     pdf.set_font('Arial', '', 10)
     pdf.set_text_color(60, 60, 60)
-    pdf.cell(0, 6, "DDO | Accounts Officers | Audit Officers | Exam Aspirants", 0, 1, 'C')
+
+    # Build prepared_for text from list or use default
+    if prepared_for and isinstance(prepared_for, list) and len(prepared_for) > 0:
+        prepared_for_text = " | ".join(prepared_for)
+    else:
+        prepared_for_text = "Group B | Inspector | Postal Assistant | Postman | MTS"
+
+    pdf.cell(0, 6, prepared_for_text, 0, 1, 'C')
 
     # Disclaimer box at bottom
     pdf.set_y(-75)
@@ -1058,10 +1072,11 @@ def create_professional_notes_pdf(notes, filename, title=None, website="www.exam
     i = 0
     while i < len(lines):
         line = lines[i]
-        # Clean the line of problematic characters
-        clean_line = line.encode('latin-1', errors='replace').decode('latin-1')
-        # Replace common problematic characters
-        clean_line = clean_line.replace('?', '-').replace('', '-').replace('', "'")
+        # Clean the line of problematic characters - use 'ignore' to skip non-latin chars
+        clean_line = line.encode('latin-1', errors='ignore').decode('latin-1')
+        # If line became empty after encoding, try replacing with spaces
+        if not clean_line.strip() and line.strip():
+            clean_line = ''.join(c if ord(c) < 256 else ' ' for c in line)
         stripped = clean_line.strip()
 
         # Always reset X position to left margin before each line
@@ -1245,17 +1260,17 @@ def create_professional_notes_pdf(notes, filename, title=None, website="www.exam
             pdf.set_text_color(0, 0, 0)
             bullet_text = stripped[2:]
             pdf.set_x(pdf.l_margin + 5)
-            pdf.multi_cell(0, 6, chr(149) + " " + bullet_text)  # Use bullet character
+            pdf.multi_cell(0, 6, "  - " + bullet_text)
             i += 1
             continue
 
-        # Unicode bullet points - convert to ASCII
+        # Unicode bullet points - convert to ASCII dash
         if len(stripped) > 2 and stripped[0] in ['\u2022', '\u2023', '\u25cf', '\u25cb', '\u2713', '\u2714']:
             pdf.set_font('Arial', '', 11)
             pdf.set_text_color(0, 0, 0)
             bullet_text = stripped[2:] if stripped[1] == ' ' else stripped[1:]
             pdf.set_x(pdf.l_margin + 5)
-            pdf.multi_cell(0, 6, chr(149) + " " + bullet_text)
+            pdf.multi_cell(0, 6, "  - " + bullet_text)
             i += 1
             continue
 
@@ -1392,12 +1407,15 @@ def download_notes_pdf():
         notes = data.get('notes', '')
         filename = data.get('filename', 'notes')
         title = data.get('title', None)  # Optional custom title
-        website = data.get('website', 'PDF MCQ Generator')
+        website = data.get('website', 'Dakshin Postal Academy')
+        prepared_for = data.get('prepared_for', None)  # List of target audiences
 
         if not notes or notes.strip() == '':
             return jsonify({'error': 'No notes content provided'}), 400
 
         print(f"Generating professional PDF for notes: {len(notes)} characters")
+        if prepared_for:
+            print(f"Prepared for: {prepared_for}")
 
         clean_filename = filename.replace('.pdf', '') if filename else 'notes'
 
@@ -1407,7 +1425,8 @@ def download_notes_pdf():
                 notes=notes,
                 filename=filename,
                 title=title,
-                website=website
+                website=website,
+                prepared_for=prepared_for
             )
 
             # Output PDF to buffer
