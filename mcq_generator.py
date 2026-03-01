@@ -426,12 +426,23 @@ def generate_comprehensive_notes(text, model_provider='openrouter', model_type='
         system_prompt = """You are an expert academic note-maker, government-exam trainer, and documentation analyst.
 Your task is to prepare EXHAUSTIVE, ERROR-FREE, AND COMPLETE NOTES from the given document section.
 
-CRITICAL INSTRUCTIONS:
-- Do NOT summarize loosely - cover EVERY rule, provision, and detail
-- Do NOT omit any rule, note, explanation, proviso, example, or exception
-- Every rule number, sub-rule, NOTE, and reference must be preserved
-- Use clean ASCII characters only - avoid special symbols like emojis
-- Format for professional PDF printing
+ABSOLUTE REQUIREMENTS - VIOLATION IS NOT ALLOWED:
+1. Process EVERY SINGLE RULE from Rule 1 to the last rule - NO SKIPPING
+2. Do NOT write "continued in next section" or "and so on" - COMPLETE ALL CONTENT
+3. Do NOT summarize multiple rules together - each rule must be separate
+4. Do NOT omit any rule, note, explanation, proviso, example, or exception
+5. Every rule number, sub-rule, NOTE, and reference must be preserved
+6. Use clean ASCII characters only - avoid special symbols like emojis
+7. Do NOT use ** for bold - use plain text with UPPERCASE for emphasis
+8. Format for professional PDF printing
+
+FORBIDDEN PHRASES (NEVER USE THESE):
+- "Continued for subsequent sections"
+- "And so on"
+- "etc."
+- "remaining rules follow similar pattern"
+- "as mentioned earlier"
+- Any phrase suggesting incomplete coverage
 
 These notes will be used for:
 - Daily reference by government officers
@@ -463,12 +474,12 @@ START with:
 3. Who Should Study This (DDO, Accounts Officer, Audit Officer, Exam Aspirants)
 4. Key Concepts Introduction
 
-Then process all rules/sections in this part EXHAUSTIVELY."""
+Then process EVERY SINGLE RULE in this section completely - do NOT skip any rule."""
 
                 elif is_last:
                     chunk_instruction = f"""This is the FINAL PART ({chunk_num} of {len(chunks)}) of the document.
 
-Process all remaining rules/sections EXHAUSTIVELY.
+Process EVERY REMAINING RULE completely - do NOT skip any rule.
 
 END with:
 1. QUICK REVISION SHEET - One page summary of key points
@@ -479,38 +490,41 @@ END with:
                 else:
                     chunk_instruction = f"""This is PART {chunk_num} of {len(chunks)} of the document.
 
-Continue processing all rules/sections in this part EXHAUSTIVELY.
-Maintain continuity with previous sections."""
+Process EVERY SINGLE RULE in this section completely.
+Do NOT skip any rule. Do NOT write "continued" or "and so on".
+Cover each rule with full details."""
 
                 user_prompt = f"""{chunk_instruction}
 
-NOTE-MAKING FORMAT (MANDATORY):
+CRITICAL: Process EVERY rule in this section. Do NOT abbreviate or skip.
+
+FORMAT FOR EACH RULE:
 
 RULE [Number] - [Title]
-Rule Text: [Exact text simplified but complete]
+Rule Text: [Complete rule text - do not abbreviate]
 Key Points:
 - Point 1
 - Point 2
-Explanation: [Clear explanation in simple language]
-Important for Exam: [Why this rule matters]
-Reference: [Any cross-references to other rules]
+Explanation: [Clear explanation]
+Important for Exam: [Why this matters]
 
-After every 2-3 rules, add:
-TABLE: Key comparison or summary table
-| Column 1 | Column 2 | Column 3 |
-|----------|----------|----------|
-| Data     | Data     | Data     |
+After every 2-3 rules, add a comparison table:
+| Rule No | Subject | Key Condition |
+|---------|---------|---------------|
 
-FLOWCHART (text-based):
+Include FLOWCHART where applicable:
 Step 1 -> Step 2 -> Step 3 -> Step 4
 
-EXAM HIGHLIGHTS after each section:
-- Most important provisions
-- Frequently confused areas
-- Common exam questions
+EXAM HIGHLIGHTS after each major section:
+- Key provisions for exam
+- Common confusions
+- MCQ focus areas
+
+REMEMBER: Do NOT use ** for bold. Use UPPERCASE for emphasis.
+REMEMBER: Do NOT write "continued for subsequent sections" - complete ALL rules in this section.
 
 ---
-DOCUMENT SECTION TO PROCESS:
+DOCUMENT SECTION TO PROCESS (cover every rule below):
 {chunk}"""
 
                 # Determine max tokens based on model
@@ -545,6 +559,29 @@ DOCUMENT SECTION TO PROCESS:
 
             # Combine all notes with clear section separators
             combined_notes = "\n\n" + "="*60 + "\n\n".join(all_notes)
+
+            # Post-processing: Clean up incomplete/placeholder phrases
+            cleanup_phrases = [
+                "(Continued for subsequent sections as needed.)",
+                "(Continued for subsequent sections...)",
+                "(Continued...)",
+                "(To be continued...)",
+                "(Remaining rules follow similar pattern)",
+                "(And so on for remaining rules)",
+                "...and so on",
+                "etc.",
+                "...etc.",
+            ]
+            for phrase in cleanup_phrases:
+                combined_notes = combined_notes.replace(phrase, "")
+
+            # Remove ** markdown bold markers
+            combined_notes = combined_notes.replace("**", "")
+
+            # Clean up extra whitespace from removals
+            import re
+            combined_notes = re.sub(r'\n{4,}', '\n\n\n', combined_notes)
+
             print(f"✅ Generated {len(combined_notes)} characters of comprehensive notes from {len(chunks)} chunks")
             return combined_notes
 
@@ -613,6 +650,29 @@ DOCUMENT CONTENT TO PROCESS:
             )
 
             notes = completion.choices[0].message.content.strip()
+
+            # Post-processing: Clean up incomplete/placeholder phrases
+            cleanup_phrases = [
+                "(Continued for subsequent sections as needed.)",
+                "(Continued for subsequent sections...)",
+                "(Continued...)",
+                "(To be continued...)",
+                "(Remaining rules follow similar pattern)",
+                "(And so on for remaining rules)",
+                "...and so on",
+                "etc.",
+                "...etc.",
+            ]
+            for phrase in cleanup_phrases:
+                notes = notes.replace(phrase, "")
+
+            # Remove ** markdown bold markers
+            notes = notes.replace("**", "")
+
+            # Clean up extra whitespace from removals
+            import re
+            notes = re.sub(r'\n{4,}', '\n\n\n', notes)
+
             print(f"✅ Generated {len(notes)} characters of comprehensive notes")
             return notes
 

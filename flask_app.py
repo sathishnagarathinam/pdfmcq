@@ -973,8 +973,19 @@ def create_professional_notes_pdf(notes, filename, title=None, website="Dakshin 
     # ============================================
     pdf.add_page()
 
-    # Title area - centered
-    pdf.ln(35)
+    # Try to add logo if it exists
+    import os
+    logo_path = os.path.join(os.path.dirname(__file__), 'static', 'images', 'dpa_logo.png')
+    if os.path.exists(logo_path) and os.path.getsize(logo_path) > 100:
+        try:
+            # Center the logo at top of page
+            pdf.image(logo_path, x=80, y=15, w=50)
+            pdf.ln(55)  # Space after logo
+        except Exception as logo_err:
+            print(f"Could not add logo: {logo_err}")
+            pdf.ln(35)
+    else:
+        pdf.ln(35)
 
     # Main title - Organization name
     pdf.set_font('Arial', 'B', 26)
@@ -1077,6 +1088,10 @@ def create_professional_notes_pdf(notes, filename, title=None, website="Dakshin 
         # If line became empty after encoding, try replacing with spaces
         if not clean_line.strip() and line.strip():
             clean_line = ''.join(c if ord(c) < 256 else ' ' for c in line)
+
+        # Remove ** markdown bold markers from the line
+        clean_line = clean_line.replace('**', '')
+
         stripped = clean_line.strip()
 
         # Always reset X position to left margin before each line
