@@ -734,6 +734,7 @@
         // Handle amendment file selection
         document.addEventListener('DOMContentLoaded', function() {
             updateModelOptions();
+            updateSummarizeModelOptions();  // Also populate summarize mode dropdown
 
             const amendmentFile = document.getElementById('amendmentPdfFile');
             if (amendmentFile) {

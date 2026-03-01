@@ -436,15 +436,22 @@ ABSOLUTE REQUIREMENTS - VIOLATION IS NOT ALLOWED:
 7. Do NOT use ** for bold - use plain text with UPPERCASE for emphasis
 8. Format for professional PDF printing
 9. MUST include FLOWCHARTS using arrow notation (->)
+10. MUST include STUDY TOOLS: comparison tables, summary tables after every 2-3 rules
 
-FLOWCHART REQUIREMENT (MANDATORY):
-- Include at least 2-3 flowcharts per document
-- Use ONLY this arrow format: Step 1 -> Step 2 -> Step 3 -> Step 4
-- Flowcharts should show: procedures, application processes, approval chains, timelines
-- Example flowcharts to include:
-  * Application Process: Submit Application -> Verification -> Approval -> Grant
-  * Appeal Process: Grievance -> Review -> Decision -> Implementation
-  * Recognition Process: Association Formed -> Application Filed -> Scrutiny -> Recognition Granted
+MANDATORY STUDY TOOLS (YOU MUST INCLUDE THESE):
+1. COMPARISON TABLES - After every 2-3 rules, add a table comparing rules:
+   | Rule No | Subject | Authority | Time Limit | Key Condition |
+   |---------|---------|-----------|------------|---------------|
+
+2. SUMMARY TABLES - At least 2 per section:
+   | Topic | Key Points | Remember |
+   |-------|------------|----------|
+
+3. FLOWCHARTS - At least 2-3 per document using arrow format:
+   FLOWCHART - Process Name:
+   Step 1 -> Step 2 -> Step 3 -> Step 4
+
+   Example flowcharts: Application Process, Appeal Process, Recognition Process
 
 FORBIDDEN PHRASES (NEVER USE THESE):
 - "Continued for subsequent sections"
@@ -511,38 +518,42 @@ CRITICAL: Process EVERY rule in this section. Do NOT abbreviate or skip.
 FORMAT FOR EACH RULE:
 
 RULE [Number] - [Title]
-Rule Text: [Complete rule text - do not abbreviate]
+[Complete rule text - do not abbreviate or skip any part]
 Key Points:
 - Point 1
 - Point 2
 Explanation: [Clear explanation]
 Important for Exam: [Why this matters]
 
-After every 2-3 rules, add a comparison table:
+MANDATORY STUDY TOOLS - YOU MUST INCLUDE THESE:
+
+1. COMPARISON TABLES (after every 2-3 rules):
 | Rule No | Subject | Key Condition |
 |---------|---------|---------------|
+| 1       | Example | Condition A   |
 
-MANDATORY FLOWCHARTS (include at least 2 per section):
-Use this exact arrow format for flowcharts:
+2. SUMMARY TABLES (at least 2 per section):
+| Topic | Key Points | Remember |
+|-------|------------|----------|
 
+3. FLOWCHARTS (at least 2 per section):
+Use this exact arrow format:
 FLOWCHART - Process Name:
 Step 1 -> Step 2 -> Step 3 -> Step 4
 
-Examples of flowcharts you MUST include:
-- Application submission process
-- Approval/decision chain
-- Appeal/grievance procedure
-- Recognition/registration workflow
-- Timeline of events
+Examples: Application process, Approval chain, Appeal procedure, Timeline
 
 EXAM HIGHLIGHTS after each major section:
 - Key provisions for exam
 - Common confusions
 - MCQ focus areas
 
-REMEMBER: Do NOT use ** for bold. Use UPPERCASE for emphasis.
-REMEMBER: Do NOT write "continued for subsequent sections" - complete ALL rules in this section.
-REMEMBER: Include FLOWCHARTS using the -> arrow format - this is MANDATORY.
+CRITICAL REMINDERS:
+- Do NOT use ** for bold - use UPPERCASE for emphasis
+- Do NOT write "continued for subsequent sections" - complete ALL rules
+- MUST include FLOWCHARTS using the -> arrow format
+- MUST include COMPARISON TABLES after every 2-3 rules
+- MUST include at least 2 SUMMARY TABLES per section
 
 ---
 DOCUMENT SECTION TO PROCESS (cover every rule below):
@@ -624,7 +635,7 @@ CHAPTER OVERVIEW (for each chapter):
 DETAILED NOTES (RULE-WISE):
 For each Rule:
 RULE [Number] - [Title]
-Rule Text: [Exact text simplified but complete]
+[Exact text simplified but complete - no abbreviation]
 Key Points:
 - Point 1 with explanation
 - Point 2 with explanation
@@ -634,12 +645,18 @@ Conditions: [Key conditions]
 Exceptions: [Important exceptions]
 Cross-References: [Related rules]
 
-STUDY TOOLS (after every 2-3 rules):
-TABLE:
+MANDATORY STUDY TOOLS (YOU MUST INCLUDE THESE - DO NOT SKIP):
+
+1. COMPARISON TABLES (after every 2-3 rules) - REQUIRED:
 | Rule No | Subject | Authority | Time Limit | Key Condition |
 |---------|---------|-----------|------------|---------------|
+| 1       | Example | Officer   | 30 days    | Approval needed|
 
-MANDATORY FLOWCHARTS (include at least 2-3 in the document):
+2. SUMMARY TABLES - REQUIRED:
+| Topic | Key Points | Remember |
+|-------|------------|----------|
+
+3. MANDATORY FLOWCHARTS (include at least 2-3 in the document):
 Use this exact arrow format:
 
 FLOWCHART - Process Name:
