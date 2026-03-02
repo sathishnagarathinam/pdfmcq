@@ -474,9 +474,10 @@ These notes will be used for:
         if total_tokens > max_context_tokens:
             print(f"📚 Document too large ({total_tokens} tokens), processing in chunks...")
 
-            # Create overlapping chunks to ensure continuity
-            chunks = chunk_text(text, max_tokens=50000, overlap_tokens=1000)
-            print(f"📄 Split into {len(chunks)} chunks for processing")
+            # Create smaller overlapping chunks to ensure ALL content is processed
+            # Reduced from 50000 to 25000 tokens per chunk to allow more detailed processing
+            chunks = chunk_text(text, max_tokens=25000, overlap_tokens=1500)
+            print(f"📄 Split into {len(chunks)} chunks for detailed processing")
 
             all_notes = []
 
@@ -563,8 +564,14 @@ CRITICAL REMINDERS:
 DOCUMENT SECTION TO PROCESS (cover every rule below):
 {chunk}"""
 
-                # Determine max tokens based on model
-                max_tokens = 16000 if 'deepseek' in model.lower() else 8000
+                # Determine max tokens based on model - increased for comprehensive coverage
+                # DeepSeek and Gemini support larger outputs; others may be limited
+                if 'deepseek' in model.lower() or 'gemini' in model.lower():
+                    max_tokens = 16000
+                elif 'llama-3.3-70b' in model.lower() or 'llama-3.1-405b' in model.lower():
+                    max_tokens = 12000  # Larger Llama models support more output
+                else:
+                    max_tokens = 10000  # Increased from 8000 for better coverage
 
                 print(f"📤 Processing chunk {chunk_num}/{len(chunks)}...")
 
@@ -700,7 +707,13 @@ QUICK REVISION SHEET (at the end):
 DOCUMENT CONTENT TO PROCESS:
 {text}"""
 
-            max_tokens = 16000 if 'deepseek' in model.lower() else 8000
+            # Determine max tokens based on model - increased for comprehensive coverage
+            if 'deepseek' in model.lower() or 'gemini' in model.lower():
+                max_tokens = 16000
+            elif 'llama-3.3-70b' in model.lower() or 'llama-3.1-405b' in model.lower():
+                max_tokens = 12000
+            else:
+                max_tokens = 10000
 
             print(f"🤖 Calling model: {model} with max_tokens: {max_tokens}")
 

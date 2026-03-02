@@ -289,6 +289,9 @@
                 <br><br>
             </div>
 
+            <!-- Generate Mode Model Configuration (separate from generateModeSection to control visibility) -->
+            <div id="generateModeModelConfig">
+
             <!-- Parse Mode Section -->
             <div id="parseModeSection" style="display: none;">
                 <label for="answerPage">Answer Key Page Number (default: last page):</label>
@@ -434,6 +437,7 @@
                 <input type="text" id="customBaseUrl" name="customBaseUrl" placeholder="e.g., https://api.openai.com/v1">
                 <br><br>
             </div>
+            </div><!-- End of generateModeModelConfig -->
             <br><br>
             <button type="submit" id="submitButton">Generate MCQs</button>
         </form>
@@ -544,25 +548,23 @@
             openrouter: [
                 // ⭐ Most Reliable - DeepSeek Models (RECOMMENDED - Verified March 2026)
                 { value: 'deepseek/deepseek-chat', text: '⭐ DeepSeek V3 - BEST (Recommended)' },
-                { value: 'deepseek/deepseek-r1:free', text: '🆓 DeepSeek R1 (Free) - Reasoning Model' },
+                { value: 'deepseek/deepseek-r1-0528:free', text: '🆓 DeepSeek R1 (Free) - Reasoning Model' },
 
-                // 🦙 Meta Llama Models (Most Stable Free Models)
-                { value: 'meta-llama/llama-3.3-70b-instruct:free', text: '🦙 Llama 3.3 70B (Free) - High Quality' },
-                { value: 'meta-llama/llama-3.2-3b-instruct:free', text: '🦙 Llama 3.2 3B (Free) - Fast' },
-                { value: 'meta-llama/llama-3.1-8b-instruct:free', text: '🦙 Llama 3.1 8B (Free) - Balanced' },
+                // 🦙 Meta Llama Models (Verified Working - March 2026)
+                { value: 'meta-llama/llama-3.3-70b-instruct:free', text: '🦙 Llama 3.3 70B (Free) - GPT-4 Level' },
+                { value: 'meta-llama/llama-3.1-405b-instruct:free', text: '🦙 Llama 3.1 405B (Free) - Largest Open Model' },
 
-                // 🔮 Qwen Models (Stable)
-                { value: 'qwen/qwen-2.5-72b-instruct:free', text: '🔮 Qwen 2.5 72B (Free) - High Performance' },
-                { value: 'qwen/qwen-2.5-7b-instruct:free', text: '🔮 Qwen 2.5 7B (Free) - Fast' },
+                // 💎 Google Models (1M Context - Verified)
+                { value: 'google/gemini-2.0-flash-exp:free', text: '💎 Gemini 2.0 Flash (Free) - 1M Context' },
+                { value: 'google/gemma-3-27b-it:free', text: '💎 Gemma 3 27B (Free) - Multimodal' },
 
-                // 💎 Google Gemma (Stable)
-                { value: 'google/gemma-2-9b-it:free', text: '💎 Google Gemma 2 9B (Free) - Stable' },
+                // 💻 Coding Specialists (Verified)
+                { value: 'mistralai/devstral-2512:free', text: '💻 Devstral 2 (Free) - Best for Coding' },
+                { value: 'qwen/qwen3-coder:free', text: '💻 Qwen3 Coder (Free) - 480B MoE' },
 
-                // 🚀 Microsoft Phi Models (Fast)
-                { value: 'microsoft/phi-3-mini-128k-instruct:free', text: '🚀 Phi-3 Mini 128K (Free) - Fast' },
-
-                // ⚡ Mistral Models (Efficient)
-                { value: 'mistralai/mistral-7b-instruct:free', text: '⚡ Mistral 7B (Free) - Efficient' }
+                // ⚡ Fast & Efficient Models (Verified)
+                { value: 'mistralai/mistral-small-3.1-24b-instruct:free', text: '⚡ Mistral Small 3.1 (Free) - 128K Context' },
+                { value: 'mistralai/mistral-7b-instruct:free', text: '⚡ Mistral 7B (Free) - Fast' }
             ],
             openai: [
                 { value: 'gpt-3.5-turbo', text: 'GPT-3.5 Turbo' },
@@ -641,6 +643,7 @@
         // Mode switching function
         function switchMode(mode) {
             const generateSection = document.getElementById('generateModeSection');
+            const generateModelConfig = document.getElementById('generateModeModelConfig');
             const parseSection = document.getElementById('parseModeSection');
             const splitSection = document.getElementById('splitModeSection');
             const summarizeSection = document.getElementById('summarizeModeSection');
@@ -650,6 +653,7 @@
 
             if (mode === 'generate') {
                 generateSection.style.display = 'block';
+                generateModelConfig.style.display = 'block';
                 parseSection.style.display = 'none';
                 splitSection.style.display = 'none';
                 summarizeSection.style.display = 'none';
@@ -657,6 +661,7 @@
                 useAmendment.parentElement.parentElement.style.display = 'block';
             } else if (mode === 'parse') {
                 generateSection.style.display = 'none';
+                generateModelConfig.style.display = 'none';
                 parseSection.style.display = 'block';
                 splitSection.style.display = 'none';
                 summarizeSection.style.display = 'none';
@@ -664,6 +669,7 @@
                 useAmendment.parentElement.parentElement.style.display = 'none';
             } else if (mode === 'split') {
                 generateSection.style.display = 'none';
+                generateModelConfig.style.display = 'none';
                 parseSection.style.display = 'none';
                 splitSection.style.display = 'block';
                 summarizeSection.style.display = 'none';
@@ -671,6 +677,7 @@
                 useAmendment.parentElement.parentElement.style.display = 'none';
             } else if (mode === 'summarize') {
                 generateSection.style.display = 'none';
+                generateModelConfig.style.display = 'none';
                 parseSection.style.display = 'none';
                 splitSection.style.display = 'none';
                 summarizeSection.style.display = 'block';
