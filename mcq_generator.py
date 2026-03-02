@@ -1,4 +1,5 @@
 from openai import OpenAI
+import httpx
 import os
 from dotenv import load_dotenv
 import json
@@ -6,6 +7,9 @@ from PyPDF2 import PdfReader
 import re
 import math
 import time
+
+# Timeout settings for API calls (in seconds)
+API_TIMEOUT = 55  # Slightly less than Vercel's 60s max to allow for cleanup
 
 # Load environment variables
 load_dotenv()
@@ -585,9 +589,21 @@ DOCUMENT SECTION TO PROCESS (cover every rule below):
                     all_notes.append(chunk_notes)
                     print(f"✅ Chunk {chunk_num}/{len(chunks)} completed: {len(chunk_notes)} characters")
 
+                except httpx.TimeoutException as timeout_error:
+                    print(f"⏰ TIMEOUT processing chunk {chunk_num} with model {model}: {timeout_error}")
+                    all_notes.append(f"\n\n[Note: Section {chunk_num} timed out - try a faster model like DeepSeek or Llama 3.2 3B]\n\n")
                 except Exception as chunk_error:
-                    print(f"⚠️  Error processing chunk {chunk_num}: {chunk_error}")
-                    all_notes.append(f"\n\n[Note: Section {chunk_num} could not be processed - {str(chunk_error)}]\n\n")
+                    error_msg = str(chunk_error)
+                    print(f"⚠️  Error processing chunk {chunk_num} with model {model}: {error_msg}")
+                    # Check for specific error types
+                    if "404" in error_msg:
+                        all_notes.append(f"\n\n[Error: Model '{model}' not found - invalid model ID]\n\n")
+                    elif "429" in error_msg:
+                        all_notes.append(f"\n\n[Error: Rate limited on model '{model}' - try again later]\n\n")
+                    elif "timeout" in error_msg.lower():
+                        all_notes.append(f"\n\n[Error: Model '{model}' timed out - try a faster model]\n\n")
+                    else:
+                        all_notes.append(f"\n\n[Note: Section {chunk_num} could not be processed - {error_msg}]\n\n")
 
             # Combine all notes with clear section separators
             combined_notes = "\n\n" + "="*60 + "\n\n".join(all_notes)
@@ -686,17 +702,30 @@ DOCUMENT CONTENT TO PROCESS:
 
             max_tokens = 16000 if 'deepseek' in model.lower() else 8000
 
-            completion = client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                max_tokens=max_tokens,
-                temperature=0.3,
-            )
+            print(f"🤖 Calling model: {model} with max_tokens: {max_tokens}")
 
-            notes = completion.choices[0].message.content.strip()
+            try:
+                completion = client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    max_tokens=max_tokens,
+                    temperature=0.3,
+                )
+                notes = completion.choices[0].message.content.strip()
+            except httpx.TimeoutException as timeout_error:
+                print(f"⏰ TIMEOUT with model {model}: {timeout_error}")
+                return f"Notes generation timed out with model '{model}'. Try a faster model like DeepSeek V3 or Llama 3.2 3B."
+            except Exception as api_error:
+                error_msg = str(api_error)
+                print(f"❌ API error with model {model}: {error_msg}")
+                if "404" in error_msg:
+                    return f"Model '{model}' not found. This model ID may be invalid or unavailable."
+                elif "429" in error_msg:
+                    return f"Rate limited on model '{model}'. Please try again in a few minutes."
+                raise  # Re-raise other errors
 
             # Post-processing: Clean up incomplete/placeholder phrases
             cleanup_phrases = [
@@ -1393,7 +1422,7 @@ def get_ai_client(model_provider, custom_api_key=None, custom_base_url=None):
         if custom_base_url:
             client_config["base_url"] = custom_base_url
 
-        return OpenAI(**client_config)
+        return OpenAI(**client_config, timeout=httpx.Timeout(API_TIMEOUT, connect=10.0))
 
     elif model_provider == 'openrouter':
         api_key = os.getenv("OPENROUTER_API_KEY")
@@ -1401,16 +1430,18 @@ def get_ai_client(model_provider, custom_api_key=None, custom_base_url=None):
         return OpenAI(
             base_url="https://openrouter.ai/api/v1",
             api_key=api_key,
+            timeout=httpx.Timeout(API_TIMEOUT, connect=10.0),
         )
     elif model_provider == 'openai':
         api_key = os.getenv("OPENAI_API_KEY")
         print(f"🔑 OpenAI API key: {'✅ Found' if api_key else '❌ Missing'}")
-        return OpenAI(api_key=api_key)
+        return OpenAI(api_key=api_key, timeout=httpx.Timeout(API_TIMEOUT, connect=10.0))
     elif model_provider == 'anthropic':
         # Note: Anthropic uses a different API format, but we'll use OpenAI-compatible wrapper
         return OpenAI(
             base_url="https://api.anthropic.com/v1",
             api_key=os.getenv("ANTHROPIC_API_KEY"),
+            timeout=httpx.Timeout(API_TIMEOUT, connect=10.0),
         )
     elif model_provider == 'deepseek':
         api_key = os.getenv("DEEPSEEK_API_KEY")
@@ -1418,6 +1449,7 @@ def get_ai_client(model_provider, custom_api_key=None, custom_base_url=None):
         return OpenAI(
             base_url="https://api.deepseek.com",
             api_key=api_key,
+            timeout=httpx.Timeout(API_TIMEOUT, connect=10.0),
         )
     else:
         raise ValueError(f"Unsupported model provider: {model_provider}")

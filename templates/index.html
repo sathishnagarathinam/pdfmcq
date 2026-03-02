@@ -542,42 +542,27 @@
         // Updated: Feb 2026 based on currently available OpenRouter free models
         const modelConfigs = {
             openrouter: [
-                // ⭐ Most Reliable - DeepSeek Models (Recommended)
-                { value: 'deepseek/deepseek-chat', text: '⭐ DeepSeek V3 - Most Reliable (Recommended)' },
-                { value: 'deepseek/deepseek-chat:free', text: 'DeepSeek Chat (Free) - Reliable' },
-                { value: 'deepseek/deepseek-r1:free', text: 'DeepSeek R1 (Free) - Reasoning Model' },
+                // ⭐ Most Reliable - DeepSeek Models (RECOMMENDED - Verified March 2026)
+                { value: 'deepseek/deepseek-chat', text: '⭐ DeepSeek V3 - BEST (Recommended)' },
+                { value: 'deepseek/deepseek-r1:free', text: '🆓 DeepSeek R1 (Free) - Reasoning Model' },
 
-                // 🔥 Arcee AI Models (Free Tier - Verified Feb 2026)
-                { value: 'arcee-ai/trinity-large-preview:free', text: '🔥 Arcee Trinity Large (Free) - 400B Frontier MoE' },
-                { value: 'arcee-ai/trinity-mini:free', text: 'Arcee Trinity Mini (Free) - Efficient Reasoning' },
+                // 🦙 Meta Llama Models (Most Stable Free Models)
+                { value: 'meta-llama/llama-3.3-70b-instruct:free', text: '🦙 Llama 3.3 70B (Free) - High Quality' },
+                { value: 'meta-llama/llama-3.2-3b-instruct:free', text: '🦙 Llama 3.2 3B (Free) - Fast' },
+                { value: 'meta-llama/llama-3.1-8b-instruct:free', text: '🦙 Llama 3.1 8B (Free) - Balanced' },
 
-                // 🚀 NVIDIA Nemotron Models (Free Tier - Verified Feb 2026)
-                { value: 'nvidia/nemotron-3-nano-30b-a3b:free', text: '🚀 NVIDIA Nemotron 3 Nano 30B (Free) - Newest MoE' },
-                { value: 'nvidia/nemotron-nano-9b-v2:free', text: 'NVIDIA Nemotron Nano 9B V2 (Free) - Reasoning' },
-                { value: 'nvidia/nemotron-nano-12b-v2-vl:free', text: 'NVIDIA Nemotron Nano 12B VL (Free) - Multimodal' },
+                // 🔮 Qwen Models (Stable)
+                { value: 'qwen/qwen-2.5-72b-instruct:free', text: '🔮 Qwen 2.5 72B (Free) - High Performance' },
+                { value: 'qwen/qwen-2.5-7b-instruct:free', text: '🔮 Qwen 2.5 7B (Free) - Fast' },
 
-                // Meta Llama Models (Most Stable)
-                { value: 'meta-llama/llama-3.3-70b-instruct:free', text: 'Llama 3.3 70B (Free) - High Quality' },
-                { value: 'meta-llama/llama-3.2-3b-instruct:free', text: 'Llama 3.2 3B (Free) - Fast' },
-                { value: 'meta-llama/llama-3.1-8b-instruct:free', text: 'Llama 3.1 8B (Free) - Balanced' },
+                // 💎 Google Gemma (Stable)
+                { value: 'google/gemma-2-9b-it:free', text: '💎 Google Gemma 2 9B (Free) - Stable' },
 
-                // Qwen Models
-                { value: 'qwen/qwen-2.5-72b-instruct:free', text: 'Qwen 2.5 72B (Free) - High Performance' },
-                { value: 'qwen/qwen-2.5-coder-32b-instruct:free', text: 'Qwen 2.5 Coder 32B (Free) - Code Expert' },
+                // 🚀 Microsoft Phi Models (Fast)
+                { value: 'microsoft/phi-3-mini-128k-instruct:free', text: '🚀 Phi-3 Mini 128K (Free) - Fast' },
 
-                // Google Gemma (Stable)
-                { value: 'google/gemma-2-9b-it:free', text: 'Google Gemma 2 9B (Free) - Stable' },
-
-                // Microsoft Phi Models
-                { value: 'microsoft/phi-3-medium-128k-instruct:free', text: 'Phi-3 Medium 128K (Free) - Long Context' },
-                { value: 'microsoft/phi-3-mini-128k-instruct:free', text: 'Phi-3 Mini 128K (Free) - Fast' },
-
-                // Mistral Models (Stable)
-                { value: 'mistralai/mistral-7b-instruct:free', text: 'Mistral 7B (Free) - Efficient' },
-                { value: 'mistralai/mistral-nemo:free', text: 'Mistral Nemo (Free) - Latest' },
-
-                // HuggingFace Models
-                { value: 'huggingfaceh4/zephyr-7b-beta:free', text: 'Zephyr 7B Beta (Free) - HuggingFace' }
+                // ⚡ Mistral Models (Efficient)
+                { value: 'mistralai/mistral-7b-instruct:free', text: '⚡ Mistral 7B (Free) - Efficient' }
             ],
             openai: [
                 { value: 'gpt-3.5-turbo', text: 'GPT-3.5 Turbo' },
