@@ -289,9 +289,6 @@
                 <br><br>
             </div>
 
-            <!-- Generate Mode Model Configuration (separate from generateModeSection to control visibility) -->
-            <div id="generateModeModelConfig">
-
             <!-- Parse Mode Section -->
             <div id="parseModeSection" style="display: none;">
                 <label for="answerPage">Answer Key Page Number (default: last page):</label>
@@ -399,45 +396,47 @@
                 </div>
             </div>
 
-            <!-- Book and Chapter Information -->
-            <label for="bookName">Book Name (optional):</label>
-            <input type="text" id="bookName" name="bookName" placeholder="e.g., Introduction to Computer Science">
-            <br><br>
-            <label for="chapterName">Chapter Name (optional):</label>
-            <input type="text" id="chapterName" name="chapterName" placeholder="e.g., Chapter 5: Data Structures">
-            <br><br>
-            <!-- AI Model Configuration -->
-            <label for="modelProvider">AI Model Provider:</label>
-            <select id="modelProvider" name="modelProvider" onchange="updateModelOptions()">
-                <option value="openrouter" selected>OpenRouter</option>
-                <option value="openai">OpenAI</option>
-                <option value="anthropic">Anthropic</option>
-                <option value="deepseek">DeepSeek</option>
-                <option value="custom">Custom Model</option>
-            </select>
-            <br><br>
+            <!-- Generate Mode: Book/Chapter and Model Configuration -->
+            <div id="generateModeModelConfig">
+                <!-- Book and Chapter Information -->
+                <label for="bookName">Book Name (optional):</label>
+                <input type="text" id="bookName" name="bookName" placeholder="e.g., Introduction to Computer Science">
+                <br><br>
+                <label for="chapterName">Chapter Name (optional):</label>
+                <input type="text" id="chapterName" name="chapterName" placeholder="e.g., Chapter 5: Data Structures">
+                <br><br>
+                <!-- AI Model Configuration -->
+                <label for="modelProvider">AI Model Provider:</label>
+                <select id="modelProvider" name="modelProvider" onchange="updateModelOptions()">
+                    <option value="openrouter" selected>OpenRouter</option>
+                    <option value="openai">OpenAI</option>
+                    <option value="anthropic">Anthropic</option>
+                    <option value="deepseek">DeepSeek</option>
+                    <option value="custom">Custom Model</option>
+                </select>
+                <br><br>
 
-            <!-- Model Selection -->
-            <label for="modelName">Model:</label>
-            <select id="modelName" name="modelName">
-                <option value="openrouter/cypher-alpha:free" selected>Cypher Alpha (Free)</option>
-                <option value="openrouter/anthropic/claude-2:free">Claude 2 (Free)</option>
-            </select>
-            <br><br>
+                <!-- Model Selection -->
+                <label for="modelName">Model:</label>
+                <select id="modelName" name="modelName">
+                    <option value="openrouter/cypher-alpha:free" selected>Cypher Alpha (Free)</option>
+                    <option value="openrouter/anthropic/claude-2:free">Claude 2 (Free)</option>
+                </select>
+                <br><br>
 
-            <!-- Custom Model Configuration (hidden by default) -->
-            <div id="customModelConfig" style="display: none;">
-                <label for="customModelName">Custom Model Name:</label>
-                <input type="text" id="customModelName" name="customModelName" placeholder="e.g., gpt-4, claude-3-opus">
-                <br><br>
-                <label for="customApiKey">API Key:</label>
-                <input type="password" id="customApiKey" name="customApiKey" placeholder="Enter your API key">
-                <br><br>
-                <label for="customBaseUrl">Base URL (optional):</label>
-                <input type="text" id="customBaseUrl" name="customBaseUrl" placeholder="e.g., https://api.openai.com/v1">
-                <br><br>
+                <!-- Custom Model Configuration (hidden by default) -->
+                <div id="customModelConfig" style="display: none;">
+                    <label for="customModelName">Custom Model Name:</label>
+                    <input type="text" id="customModelName" name="customModelName" placeholder="e.g., gpt-4, claude-3-opus">
+                    <br><br>
+                    <label for="customApiKey">API Key:</label>
+                    <input type="password" id="customApiKey" name="customApiKey" placeholder="Enter your API key">
+                    <br><br>
+                    <label for="customBaseUrl">Base URL (optional):</label>
+                    <input type="text" id="customBaseUrl" name="customBaseUrl" placeholder="e.g., https://api.openai.com/v1">
+                    <br><br>
+                </div>
             </div>
-            </div><!-- End of generateModeModelConfig -->
             <br><br>
             <button type="submit" id="submitButton">Generate MCQs</button>
         </form>
