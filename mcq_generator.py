@@ -441,11 +441,11 @@ def generate_comprehensive_notes(text, model_provider='openrouter', model_type='
             max_output_tokens = 8000  # ~2:1 ratio for comprehensive coverage
             model_context_info = "GPT-4o-mini (128K context, chunked for coverage)"
         elif 'gpt-4' in model.lower():
-            max_context_tokens = 20000  # Force chunking for documents > 20K tokens
-            chunk_size = 20000
-            chunk_overlap = 2500
-            max_output_tokens = 10000  # 2:1 ratio
-            model_context_info = "GPT-4 (128K context, chunked for coverage)"
+            max_context_tokens = 12000  # Force more chunking to avoid timeout
+            chunk_size = 12000  # Smaller chunks = faster response
+            chunk_overlap = 1500
+            max_output_tokens = 6000  # 2:1 ratio, faster completion
+            model_context_info = "GPT-4 (128K context, optimized for speed)"
         elif 'claude' in model.lower():
             max_context_tokens = 40000  # Claude can handle more
             chunk_size = 40000
@@ -483,23 +483,10 @@ ABSOLUTE REQUIREMENTS - VIOLATION IS NOT ALLOWED:
 6. Use clean ASCII characters only - avoid special symbols like emojis
 7. Do NOT use ** for bold - use plain text with UPPERCASE for emphasis
 8. Format for professional PDF printing
-9. MUST include FLOWCHARTS using arrow notation (->)
-10. MUST include STUDY TOOLS: comparison tables, summary tables after every 2-3 rules
 
-MANDATORY STUDY TOOLS (YOU MUST INCLUDE THESE):
-1. COMPARISON TABLES - After every 2-3 rules, add a table comparing rules:
-   | Rule No | Subject | Authority | Time Limit | Key Condition |
-   |---------|---------|-----------|------------|---------------|
-
-2. SUMMARY TABLES - At least 2 per section:
-   | Topic | Key Points | Remember |
-   |-------|------------|----------|
-
-3. FLOWCHARTS - At least 2-3 per document using arrow format:
-   FLOWCHART - Process Name:
-   Step 1 -> Step 2 -> Step 3 -> Step 4
-
-   Example flowcharts: Application Process, Appeal Process, Recognition Process
+IMPORTANT: Do NOT add comparison tables, summary tables, or flowcharts after each rule.
+These study tools will be added ONLY at the very end of the complete document.
+Focus on comprehensive rule coverage in this section.
 
 FORBIDDEN PHRASES (NEVER USE THESE):
 - "Continued for subsequent sections"
@@ -547,11 +534,24 @@ Then process EVERY SINGLE RULE in this section completely - do NOT skip any rule
 
 Process EVERY REMAINING RULE completely - do NOT skip any rule.
 
-END with:
-1. QUICK REVISION SHEET - One page summary of key points
-2. EXAM FOCUS AREAS - Most important rules for exams
-3. COMMON MISTAKES TO AVOID
-4. MCQ-PRONE AREAS"""
+AFTER processing all rules, ADD THESE STUDY TOOLS AT THE END:
+
+1. MASTER COMPARISON TABLE - Compare ALL major rules:
+| Rule No | Subject | Authority | Time Limit | Key Condition |
+|---------|---------|-----------|------------|---------------|
+
+2. COMPREHENSIVE SUMMARY TABLE:
+| Chapter | Key Rules | Important Points | Exam Focus |
+|---------|-----------|------------------|------------|
+
+3. FLOWCHARTS for major processes (use -> arrow format):
+FLOWCHART - [Process Name]:
+Step 1 -> Step 2 -> Step 3 -> Step 4
+
+4. QUICK REVISION SHEET - One page summary of key points
+5. EXAM FOCUS AREAS - Most important rules for exams
+6. COMMON MISTAKES TO AVOID
+7. MCQ-PRONE AREAS"""
 
                 else:
                     chunk_instruction = f"""This is PART {chunk_num} of {len(chunks)} of the document.
@@ -574,35 +574,11 @@ Key Points:
 Explanation: [Clear explanation]
 Important for Exam: [Why this matters]
 
-MANDATORY STUDY TOOLS - YOU MUST INCLUDE THESE:
-
-1. COMPARISON TABLES (after every 2-3 rules):
-| Rule No | Subject | Key Condition |
-|---------|---------|---------------|
-| 1       | Example | Condition A   |
-
-2. SUMMARY TABLES (at least 2 per section):
-| Topic | Key Points | Remember |
-|-------|------------|----------|
-
-3. FLOWCHARTS (at least 2 per section):
-Use this exact arrow format:
-FLOWCHART - Process Name:
-Step 1 -> Step 2 -> Step 3 -> Step 4
-
-Examples: Application process, Approval chain, Appeal procedure, Timeline
-
-EXAM HIGHLIGHTS after each major section:
-- Key provisions for exam
-- Common confusions
-- MCQ focus areas
-
-CRITICAL REMINDERS:
+IMPORTANT REMINDERS:
 - Do NOT use ** for bold - use UPPERCASE for emphasis
 - Do NOT write "continued for subsequent sections" - complete ALL rules
-- MUST include FLOWCHARTS using the -> arrow format
-- MUST include COMPARISON TABLES after every 2-3 rules
-- MUST include at least 2 SUMMARY TABLES per section
+- Do NOT add comparison tables or flowcharts here - they will be added at the END only
+- Focus on comprehensive rule coverage
 
 ---
 DOCUMENT SECTION TO PROCESS (cover every rule below):
