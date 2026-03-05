@@ -544,30 +544,22 @@
         // Updated: Feb 2026 based on currently available OpenRouter free models
         const modelConfigs = {
             openrouter: [
-                // 🌟 PREMIUM MODELS - Best for Summarization (via OpenRouter)
-                { value: 'openai/gpt-4o', text: '🌟 GPT-4o (Premium) - Best Quality' },
-                { value: 'openai/gpt-4o-mini', text: '🌟 GPT-4o Mini (Premium) - Fast & Affordable' },
-                { value: 'anthropic/claude-sonnet-4', text: '🌟 Claude Sonnet 4 (Premium) - Excellent Writing' },
-                { value: 'anthropic/claude-3.5-sonnet', text: '🌟 Claude 3.5 Sonnet (Premium) - Best Summarizer' },
-                { value: 'google/gemini-2.5-pro-preview', text: '🌟 Gemini 2.5 Pro (Premium) - Latest Google' },
+                // ⭐ DeepSeek Models (RECOMMENDED - Most Reliable Free Models)
+                { value: 'deepseek/deepseek-chat:free', text: '⭐ DeepSeek V3 (Free) - RECOMMENDED' },
+                { value: 'deepseek/deepseek-r1:free', text: '🆓 DeepSeek R1 (Free) - Reasoning Model' },
 
-                // ⭐ Most Reliable - DeepSeek Models (RECOMMENDED - Verified March 2026)
-                { value: 'deepseek/deepseek-chat', text: '⭐ DeepSeek V3 - BEST FREE (Recommended)' },
-                { value: 'deepseek/deepseek-r1-0528:free', text: '🆓 DeepSeek R1 (Free) - Reasoning Model' },
-
-                // 🦙 Meta Llama Models (Verified Working - March 2026)
+                // 🦙 Meta Llama Models (Free)
                 { value: 'meta-llama/llama-3.3-70b-instruct:free', text: '🦙 Llama 3.3 70B (Free) - GPT-4 Level' },
                 { value: 'meta-llama/llama-3.1-405b-instruct:free', text: '🦙 Llama 3.1 405B (Free) - Largest Open Model' },
 
-                // 💎 Google Models (1M Context - Verified)
+                // 💎 Google Models (Free)
                 { value: 'google/gemini-2.0-flash-exp:free', text: '💎 Gemini 2.0 Flash (Free) - 1M Context' },
                 { value: 'google/gemma-3-27b-it:free', text: '💎 Gemma 3 27B (Free) - Multimodal' },
 
-                // 💻 Coding Specialists (Verified)
-                { value: 'mistralai/devstral-2512:free', text: '💻 Devstral 2 (Free) - Best for Coding' },
-                { value: 'qwen/qwen3-coder:free', text: '💻 Qwen3 Coder (Free) - 480B MoE' },
+                // 🔮 Qwen Models (Free)
+                { value: 'qwen/qwen-2.5-72b-instruct:free', text: '🔮 Qwen 2.5 72B (Free) - Strong Performance' },
 
-                // ⚡ Fast & Efficient Models (Verified)
+                // ⚡ Fast & Efficient Models (Free)
                 { value: 'mistralai/mistral-small-3.1-24b-instruct:free', text: '⚡ Mistral Small 3.1 (Free) - 128K Context' },
                 { value: 'mistralai/mistral-7b-instruct:free', text: '⚡ Mistral 7B (Free) - Fast' }
             ],

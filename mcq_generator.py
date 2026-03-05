@@ -391,7 +391,7 @@ Provide ONLY the 2-line summary, nothing else."""
         return "Summary generation failed"
 
 
-def generate_comprehensive_notes(text, model_provider='openrouter', model_type='deepseek/deepseek-chat'):
+def generate_comprehensive_notes(text, model_provider='openrouter', model_type='deepseek/deepseek-chat:free'):
     """
     Generate EXHAUSTIVE, ERROR-FREE, AND COMPLETE NOTES from PDF content.
     Designed for academic/exam preparation with detailed rule-wise analysis.
@@ -1496,7 +1496,7 @@ def get_model_name(model_provider, model_type):
     """Returns the appropriate model name based on provider and type."""
     models = {
         'openrouter': {
-            'basic': 'deepseek/deepseek-chat',
+            'basic': 'deepseek/deepseek-chat:free',
             'advanced': 'meta-llama/llama-3.3-70b-instruct:free'
         },
         'openai': {
@@ -1878,7 +1878,7 @@ def generate_mcq_questions_advanced(text, num_questions=5, difficulty='medium', 
             return generate_mcq_questions(text, num_questions, 'openrouter', 'basic')
 
         provider = model_config.get('provider', 'openrouter')
-        model_name = model_config.get('model_name', 'deepseek/deepseek-chat')
+        model_name = model_config.get('model_name', 'deepseek/deepseek-chat:free')
         custom_api_key = model_config.get('custom_api_key')
         custom_base_url = model_config.get('custom_base_url')
         book_name = model_config.get('book_name', '').strip()
