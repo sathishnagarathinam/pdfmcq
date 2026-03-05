@@ -541,16 +541,15 @@
 
         // Model configurations
         // Note: Free models on OpenRouter change frequently - some may become unavailable
-        // Updated: Feb 2026 based on currently available OpenRouter free models
+        // Updated: March 2026 based on currently available OpenRouter free models
         const modelConfigs = {
             openrouter: [
-                // ⭐ DeepSeek Models (RECOMMENDED - Most Reliable Free Models)
-                { value: 'deepseek/deepseek-chat:free', text: '⭐ DeepSeek V3 (Free) - RECOMMENDED' },
-                { value: 'deepseek/deepseek-r1:free', text: '🆓 DeepSeek R1 (Free) - Reasoning Model' },
+                // ⭐ Llama Models (RECOMMENDED - Most Reliable Free Models)
+                { value: 'meta-llama/llama-3.3-70b-instruct:free', text: '⭐ Llama 3.3 70B (Free) - RECOMMENDED' },
+                { value: 'meta-llama/llama-3.2-3b-instruct:free', text: '🆓 Llama 3.2 3B (Free) - Fast' },
 
                 // 🦙 Meta Llama Models (Free)
-                { value: 'meta-llama/llama-3.3-70b-instruct:free', text: '🦙 Llama 3.3 70B (Free) - GPT-4 Level' },
-                { value: 'meta-llama/llama-3.1-405b-instruct:free', text: '🦙 Llama 3.1 405B (Free) - Largest Open Model' },
+                { value: 'meta-llama/llama-3.1-8b-instruct:free', text: '🦙 Llama 3.1 8B (Free) - Efficient' },
 
                 // 💎 Google Models (Free)
                 { value: 'google/gemini-2.0-flash-exp:free', text: '💎 Gemini 2.0 Flash (Free) - 1M Context' },

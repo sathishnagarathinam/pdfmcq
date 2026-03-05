@@ -240,10 +240,10 @@ def get_model_token_limits(provider, model_name):
     # Note: Free models on OpenRouter change frequently - some may become unavailable
     # Updated: Feb 2026 based on currently available OpenRouter free models
     free_tier_models = {
-        # DeepSeek Models (Most Reliable)
-        'deepseek/deepseek-chat': {'tokens': 8000, 'rate_limit': '50/day'},  # DeepSeek V3 - Most reliable
-        'deepseek/deepseek-chat:free': {'tokens': 8000, 'rate_limit': '20/min'},  # DeepSeek Chat Free
-        'deepseek/deepseek-r1:free': {'tokens': 8000, 'rate_limit': '20/min'},  # DeepSeek R1 (latest)
+        # Meta Llama Models (Most Reliable - Verified March 2026)
+        'meta-llama/llama-3.3-70b-instruct:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Llama 3.3 70B - RECOMMENDED
+        'meta-llama/llama-3.2-3b-instruct:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Llama 3.2 3B - Fast
+        'meta-llama/llama-3.1-8b-instruct:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Llama 3.1 8B - Efficient
 
         # Arcee AI Models (Free Tier - Verified Feb 2026)
         'arcee-ai/trinity-large-preview:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Trinity Large 400B MoE (13B active) - Frontier
@@ -323,8 +323,7 @@ def get_rate_limit_delay(model_name, chunk_number):
         'meta-llama/llama-3.2-3b-instruct:free': 3,
         'meta-llama/llama-3.1-8b-instruct:free': 3,
         'qwen/qwen-2.5-72b-instruct:free': 3,
-        'deepseek/deepseek-chat:free': 3,
-        'deepseek/deepseek-r1:free': 3,
+        'meta-llama/llama-3.1-8b-instruct:free': 3,
         'google/gemma-2-9b-it:free': 3,
         'microsoft/phi-3-medium-128k-instruct:free': 3,
         'microsoft/phi-3-mini-128k-instruct:free': 3,
@@ -332,8 +331,6 @@ def get_rate_limit_delay(model_name, chunk_number):
         'mistralai/mistral-nemo:free': 3,
         'huggingfaceh4/zephyr-7b-beta:free': 3,
 
-        # DeepSeek V3 (daily limit, conservative delay)
-        'deepseek/deepseek-chat': 1,
     }
 
     # Only add delay after the first chunk
@@ -391,7 +388,7 @@ Provide ONLY the 2-line summary, nothing else."""
         return "Summary generation failed"
 
 
-def generate_comprehensive_notes(text, model_provider='openrouter', model_type='deepseek/deepseek-chat:free'):
+def generate_comprehensive_notes(text, model_provider='openrouter', model_type='meta-llama/llama-3.3-70b-instruct:free'):
     """
     Generate EXHAUSTIVE, ERROR-FREE, AND COMPLETE NOTES from PDF content.
     Designed for academic/exam preparation with detailed rule-wise analysis.
@@ -401,7 +398,7 @@ def generate_comprehensive_notes(text, model_provider='openrouter', model_type='
     Args:
         text (str): Extracted text from PDF
         model_provider (str): AI provider to use
-        model_type (str): Model identifier (can be 'basic', 'advanced', or a full model name like 'deepseek/deepseek-chat')
+        model_type (str): Model identifier (can be 'basic', 'advanced', or a full model name like 'meta-llama/llama-3.3-70b-instruct:free')
 
     Returns:
         str: Comprehensive notes with tables, flowcharts, and exam-oriented content
@@ -1496,7 +1493,7 @@ def get_model_name(model_provider, model_type):
     """Returns the appropriate model name based on provider and type."""
     models = {
         'openrouter': {
-            'basic': 'deepseek/deepseek-chat:free',
+            'basic': 'meta-llama/llama-3.3-70b-instruct:free',
             'advanced': 'meta-llama/llama-3.3-70b-instruct:free'
         },
         'openai': {
@@ -1878,7 +1875,7 @@ def generate_mcq_questions_advanced(text, num_questions=5, difficulty='medium', 
             return generate_mcq_questions(text, num_questions, 'openrouter', 'basic')
 
         provider = model_config.get('provider', 'openrouter')
-        model_name = model_config.get('model_name', 'deepseek/deepseek-chat:free')
+        model_name = model_config.get('model_name', 'meta-llama/llama-3.3-70b-instruct:free')
         custom_api_key = model_config.get('custom_api_key')
         custom_base_url = model_config.get('custom_base_url')
         book_name = model_config.get('book_name', '').strip()
