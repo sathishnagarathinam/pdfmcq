@@ -419,42 +419,51 @@ def generate_comprehensive_notes(text, model_provider='openrouter', model_type='
         # OpenRouter free models: typically 8-32K context -> use 20K chunks
         # Claude models: 100-200K context -> use 45K chunks
 
+        # IMPORTANT: For comprehensive notes, we need to chunk documents to ensure
+        # each chunk gets adequate output tokens. A 46K token document with only 8K output
+        # would only generate notes for ~15% of the content!
+        #
+        # Strategy: Set max_context_tokens to force chunking when document is too large
+        # for the output tokens to cover comprehensively.
+        # Rule of thumb: Each input chunk should be ~2-3x the max_output_tokens to allow
+        # detailed coverage of the content.
+
         if 'gpt-3.5' in model.lower():
-            max_context_tokens = 12000  # GPT-3.5 has 16K limit
-            chunk_size = 6000
-            chunk_overlap = 800
-            max_output_tokens = 4000  # Keep output small for speed
-            model_context_info = "GPT-3.5 (16K context, optimized for speed)"
+            max_context_tokens = 8000  # Force chunking for documents > 8K tokens
+            chunk_size = 8000
+            chunk_overlap = 1000
+            max_output_tokens = 4000  # 2:1 ratio for comprehensive coverage
+            model_context_info = "GPT-3.5 (16K context, chunked for coverage)"
         elif 'gpt-4o-mini' in model.lower():
-            max_context_tokens = 50000  # Use conservative limit for timeout safety
-            chunk_size = 15000  # Smaller chunks = faster response
-            chunk_overlap = 1500
-            max_output_tokens = 8000  # Moderate output for speed
-            model_context_info = "GPT-4o-mini (128K context, optimized for speed)"
-        elif 'gpt-4' in model.lower():
-            max_context_tokens = 60000  # Conservative limit for GPT-4
-            chunk_size = 20000  # Moderate chunks
+            max_context_tokens = 15000  # Force chunking for documents > 15K tokens
+            chunk_size = 15000  # Each chunk gets full output allocation
             chunk_overlap = 2000
-            max_output_tokens = 8000
-            model_context_info = "GPT-4 (128K context)"
+            max_output_tokens = 8000  # ~2:1 ratio for comprehensive coverage
+            model_context_info = "GPT-4o-mini (128K context, chunked for coverage)"
+        elif 'gpt-4' in model.lower():
+            max_context_tokens = 20000  # Force chunking for documents > 20K tokens
+            chunk_size = 20000
+            chunk_overlap = 2500
+            max_output_tokens = 10000  # 2:1 ratio
+            model_context_info = "GPT-4 (128K context, chunked for coverage)"
         elif 'claude' in model.lower():
-            max_context_tokens = 150000  # Claude has 100-200K limit
-            chunk_size = 45000
-            chunk_overlap = 3000
+            max_context_tokens = 40000  # Claude can handle more
+            chunk_size = 40000
+            chunk_overlap = 4000
             max_output_tokens = 16384
             model_context_info = "Claude (200K context)"
         elif ':free' in model.lower():
-            # Free OpenRouter models - use moderate settings
-            max_context_tokens = 50000
+            # Free OpenRouter models - moderate settings
+            max_context_tokens = 20000
             chunk_size = 20000
-            chunk_overlap = 2000
-            max_output_tokens = 12000
+            chunk_overlap = 2500
+            max_output_tokens = 10000
             model_context_info = "Free tier model"
         else:
             # Default for other models
-            max_context_tokens = 60000
+            max_context_tokens = 25000
             chunk_size = 25000
-            chunk_overlap = 2500
+            chunk_overlap = 3000
             max_output_tokens = 12000
             model_context_info = "Standard model"
 
@@ -646,8 +655,9 @@ DOCUMENT SECTION TO PROCESS (cover every rule below):
             successful_chunks = sum(1 for note in all_notes if not note.startswith('\n\n[Note:') and not note.startswith('\n\n[Error:'))
             print(f"📊 Chunk processing complete: {successful_chunks}/{len(chunks)} chunks processed successfully")
 
-            # Combine all notes with clear section separators
-            combined_notes = "\n\n" + "="*60 + "\n\n".join(all_notes)
+            # Combine all notes with clear section separators between chunks
+            section_separator = "\n\n" + "="*60 + "\n\n"
+            combined_notes = section_separator.join(all_notes)
 
             # Post-processing: Clean up incomplete/placeholder phrases
             cleanup_phrases = [
