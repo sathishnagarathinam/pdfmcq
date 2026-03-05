@@ -1440,6 +1440,8 @@ def get_ai_client(model_provider, custom_api_key=None, custom_base_url=None):
     elif model_provider == 'openrouter':
         api_key = os.getenv("OPENROUTER_API_KEY")
         print(f"🔑 OpenRouter API key: {'✅ Found' if api_key else '❌ Missing'}")
+        if not api_key:
+            raise ValueError("OpenRouter API key is missing. Please set OPENROUTER_API_KEY in environment variables.")
         return OpenAI(
             base_url="https://openrouter.ai/api/v1",
             api_key=api_key,
@@ -1448,17 +1450,24 @@ def get_ai_client(model_provider, custom_api_key=None, custom_base_url=None):
     elif model_provider == 'openai':
         api_key = os.getenv("OPENAI_API_KEY")
         print(f"🔑 OpenAI API key: {'✅ Found' if api_key else '❌ Missing'}")
+        if not api_key:
+            raise ValueError("OpenAI API key is not configured. To use OpenAI models, please select 'OpenRouter' as provider and choose GPT models from the list - they work with your OpenRouter API key!")
         return OpenAI(api_key=api_key, timeout=httpx.Timeout(API_TIMEOUT, connect=10.0))
     elif model_provider == 'anthropic':
-        # Note: Anthropic uses a different API format, but we'll use OpenAI-compatible wrapper
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        print(f"🔑 Anthropic API key: {'✅ Found' if api_key else '❌ Missing'}")
+        if not api_key:
+            raise ValueError("Anthropic API key is not configured. To use Claude models, please select 'OpenRouter' as provider and choose Claude models from the list - they work with your OpenRouter API key!")
         return OpenAI(
             base_url="https://api.anthropic.com/v1",
-            api_key=os.getenv("ANTHROPIC_API_KEY"),
+            api_key=api_key,
             timeout=httpx.Timeout(API_TIMEOUT, connect=10.0),
         )
     elif model_provider == 'deepseek':
         api_key = os.getenv("DEEPSEEK_API_KEY")
         print(f"🔑 DeepSeek API key: {'✅ Found' if api_key else '❌ Missing'}")
+        if not api_key:
+            raise ValueError("DeepSeek API key is not configured. To use DeepSeek models, please select 'OpenRouter' as provider - DeepSeek models are available there!")
         return OpenAI(
             base_url="https://api.deepseek.com",
             api_key=api_key,

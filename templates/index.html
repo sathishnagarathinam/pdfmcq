@@ -545,8 +545,15 @@
         // Updated: Feb 2026 based on currently available OpenRouter free models
         const modelConfigs = {
             openrouter: [
+                // 🌟 PREMIUM MODELS - Best for Summarization (via OpenRouter)
+                { value: 'openai/gpt-4o', text: '🌟 GPT-4o (Premium) - Best Quality' },
+                { value: 'openai/gpt-4o-mini', text: '🌟 GPT-4o Mini (Premium) - Fast & Affordable' },
+                { value: 'anthropic/claude-sonnet-4', text: '🌟 Claude Sonnet 4 (Premium) - Excellent Writing' },
+                { value: 'anthropic/claude-3.5-sonnet', text: '🌟 Claude 3.5 Sonnet (Premium) - Best Summarizer' },
+                { value: 'google/gemini-2.5-pro-preview', text: '🌟 Gemini 2.5 Pro (Premium) - Latest Google' },
+
                 // ⭐ Most Reliable - DeepSeek Models (RECOMMENDED - Verified March 2026)
-                { value: 'deepseek/deepseek-chat', text: '⭐ DeepSeek V3 - BEST (Recommended)' },
+                { value: 'deepseek/deepseek-chat', text: '⭐ DeepSeek V3 - BEST FREE (Recommended)' },
                 { value: 'deepseek/deepseek-r1-0528:free', text: '🆓 DeepSeek R1 (Free) - Reasoning Model' },
 
                 // 🦙 Meta Llama Models (Verified Working - March 2026)
@@ -566,19 +573,19 @@
                 { value: 'mistralai/mistral-7b-instruct:free', text: '⚡ Mistral 7B (Free) - Fast' }
             ],
             openai: [
-                { value: 'gpt-3.5-turbo', text: 'GPT-3.5 Turbo' },
-                { value: 'gpt-4', text: 'GPT-4' },
-                { value: 'gpt-4-turbo', text: 'GPT-4 Turbo' },
-                { value: 'gpt-4o', text: 'GPT-4o' }
+                { value: 'gpt-3.5-turbo', text: '⚠️ GPT-3.5 Turbo (Requires OpenAI API Key)' },
+                { value: 'gpt-4', text: '⚠️ GPT-4 (Requires OpenAI API Key)' },
+                { value: 'gpt-4-turbo', text: '⚠️ GPT-4 Turbo (Requires OpenAI API Key)' },
+                { value: 'gpt-4o', text: '⚠️ GPT-4o (Requires OpenAI API Key)' }
             ],
             anthropic: [
-                { value: 'claude-3-haiku-20240307', text: 'Claude 3 Haiku' },
-                { value: 'claude-3-sonnet-20240229', text: 'Claude 3 Sonnet' },
-                { value: 'claude-3-opus-20240229', text: 'Claude 3 Opus' }
+                { value: 'claude-3-haiku-20240307', text: '⚠️ Claude 3 Haiku (Requires Anthropic API Key)' },
+                { value: 'claude-3-sonnet-20240229', text: '⚠️ Claude 3 Sonnet (Requires Anthropic API Key)' },
+                { value: 'claude-3-opus-20240229', text: '⚠️ Claude 3 Opus (Requires Anthropic API Key)' }
             ],
             deepseek: [
-                { value: 'deepseek-chat', text: 'DeepSeek Chat' },
-                { value: 'deepseek-coder', text: 'DeepSeek Coder' }
+                { value: 'deepseek-chat', text: '⚠️ DeepSeek Chat (Requires DeepSeek API Key)' },
+                { value: 'deepseek-coder', text: '⚠️ DeepSeek Coder (Requires DeepSeek API Key)' }
             ]
         };
 
