@@ -1830,8 +1830,12 @@ def summarize_pdf():
             model_type=model_type
         )
 
-        if not notes or "failed" in notes.lower():
-            return jsonify({'error': 'Failed to generate notes'}), 500
+        # Check for actual generation failure (specific error message from generate_comprehensive_notes)
+        # Note: We only check for the specific error prefix, not just "failed" anywhere in the notes
+        # because the PDF content may contain words like "failed", "failure", etc.
+        if not notes or notes.startswith("Notes generation failed:") or notes.startswith("Unable to generate notes"):
+            error_msg = notes if notes else "No notes generated"
+            return jsonify({'error': f'Failed to generate notes: {error_msg}'}), 500
 
         print(f"✅ Notes generated: {len(notes)} characters")
 
