@@ -1480,7 +1480,16 @@ def get_ai_client(model_provider, custom_api_key=None, custom_base_url=None):
         raise ValueError(f"Unsupported model provider: {model_provider}")
 
 def get_model_name(model_provider, model_type):
-    """Returns the appropriate model name based on provider and type."""
+    """Returns the appropriate model name based on provider and type.
+
+    Args:
+        model_provider: The AI provider (openrouter, openai, deepseek, anthropic)
+        model_type: Either 'basic'/'advanced' OR an actual model name (e.g., 'gpt-4o', 'gpt-3.5-turbo')
+
+    Returns:
+        The resolved model name to use with the API
+    """
+    # Define mapping for 'basic' and 'advanced' shortcuts
     models = {
         'openrouter': {
             'basic': 'meta-llama/llama-3.3-70b-instruct:free',
@@ -1493,9 +1502,24 @@ def get_model_name(model_provider, model_type):
         'deepseek': {
             'basic': 'deepseek-chat',
             'advanced': 'deepseek-coder'
+        },
+        'anthropic': {
+            'basic': 'claude-3-haiku-20240307',
+            'advanced': 'claude-3-sonnet-20240229'
         }
     }
-    return models[model_provider][model_type]
+
+    # If model_type is 'basic' or 'advanced', resolve using the mapping
+    if model_type in ('basic', 'advanced'):
+        if model_provider in models:
+            return models[model_provider][model_type]
+        else:
+            # Default to openrouter for unknown providers
+            return models['openrouter']['basic']
+
+    # Otherwise, model_type is already an actual model name - return it directly
+    # This handles cases like 'gpt-3.5-turbo', 'gpt-4o', 'claude-3-opus-20240229', etc.
+    return model_type
 
 def create_amendment_prompt_section(use_amendment=False):
     """
