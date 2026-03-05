@@ -474,10 +474,13 @@ These notes will be used for:
         if total_tokens > max_context_tokens:
             print(f"📚 Document too large ({total_tokens} tokens), processing in chunks...")
 
-            # Create smaller overlapping chunks to ensure ALL content is processed
-            # Reduced from 50000 to 25000 tokens per chunk to allow more detailed processing
-            chunks = chunk_text(text, max_tokens=25000, overlap_tokens=1500)
-            print(f"📄 Split into {len(chunks)} chunks for detailed processing")
+            # IMPORTANT: Use larger chunks to ensure comprehensive coverage of all rules
+            # 45000 tokens per chunk allows ~15,750 words per chunk (more complete rule coverage)
+            # 3000 token overlap ensures no rules are missed at chunk boundaries
+            # This ensures a 180-rule document is fully processed across all chunks
+            chunks = chunk_text(text, max_tokens=45000, overlap_tokens=3000)
+            print(f"📄 Split into {len(chunks)} chunks for comprehensive processing")
+            print(f"📊 Each chunk: ~45,000 tokens with 3,000 token overlap for context continuity")
 
             all_notes = []
 
@@ -564,14 +567,17 @@ CRITICAL REMINDERS:
 DOCUMENT SECTION TO PROCESS (cover every rule below):
 {chunk}"""
 
-                # Determine max tokens based on model - increased for comprehensive coverage
-                # DeepSeek and Gemini support larger outputs; others may be limited
-                if 'deepseek' in model.lower() or 'gemini' in model.lower():
-                    max_tokens = 16000
+                # Determine max tokens based on model - MAXIMIZED for comprehensive rule coverage
+                # Premium models via OpenRouter (GPT-4o, Claude) support very large outputs
+                # DeepSeek and Gemini also support larger outputs
+                if 'gpt-4' in model.lower() or 'claude' in model.lower():
+                    max_tokens = 16384  # Premium models: Maximum output for comprehensive notes
+                elif 'deepseek' in model.lower() or 'gemini' in model.lower():
+                    max_tokens = 16384  # DeepSeek/Gemini: Large context models
                 elif 'llama-3.3-70b' in model.lower() or 'llama-3.1-405b' in model.lower():
-                    max_tokens = 12000  # Larger Llama models support more output
+                    max_tokens = 16000  # Large Llama models: Increased from 12000
                 else:
-                    max_tokens = 10000  # Increased from 8000 for better coverage
+                    max_tokens = 12000  # Other models: Increased from 10000 for better coverage
 
                 print(f"📤 Processing chunk {chunk_num}/{len(chunks)}...")
 
@@ -612,6 +618,10 @@ DOCUMENT SECTION TO PROCESS (cover every rule below):
                     else:
                         all_notes.append(f"\n\n[Note: Section {chunk_num} could not be processed - {error_msg}]\n\n")
 
+            # Log completion summary
+            successful_chunks = sum(1 for note in all_notes if not note.startswith('\n\n[Note:') and not note.startswith('\n\n[Error:'))
+            print(f"📊 Chunk processing complete: {successful_chunks}/{len(chunks)} chunks processed successfully")
+
             # Combine all notes with clear section separators
             combined_notes = "\n\n" + "="*60 + "\n\n".join(all_notes)
 
@@ -637,7 +647,11 @@ DOCUMENT SECTION TO PROCESS (cover every rule below):
             import re
             combined_notes = re.sub(r'\n{4,}', '\n\n\n', combined_notes)
 
-            print(f"✅ Generated {len(combined_notes)} characters of comprehensive notes from {len(chunks)} chunks")
+            # Log final output statistics
+            total_chars = len(combined_notes)
+            estimated_words = total_chars // 5
+            print(f"✅ Generated {total_chars:,} characters (~{estimated_words:,} words) of comprehensive notes from {len(chunks)} chunks")
+            print(f"📝 All {len(chunks)} document sections processed - all content should be included")
             return combined_notes
 
         else:
@@ -707,13 +721,15 @@ QUICK REVISION SHEET (at the end):
 DOCUMENT CONTENT TO PROCESS:
 {text}"""
 
-            # Determine max tokens based on model - increased for comprehensive coverage
-            if 'deepseek' in model.lower() or 'gemini' in model.lower():
-                max_tokens = 16000
+            # Determine max tokens based on model - MAXIMIZED for comprehensive rule coverage
+            if 'gpt-4' in model.lower() or 'claude' in model.lower():
+                max_tokens = 16384  # Premium models: Maximum output
+            elif 'deepseek' in model.lower() or 'gemini' in model.lower():
+                max_tokens = 16384  # DeepSeek/Gemini: Large context models
             elif 'llama-3.3-70b' in model.lower() or 'llama-3.1-405b' in model.lower():
-                max_tokens = 12000
+                max_tokens = 16000  # Large Llama models
             else:
-                max_tokens = 10000
+                max_tokens = 12000  # Other models: Increased from 10000
 
             print(f"🤖 Calling model: {model} with max_tokens: {max_tokens}")
 
