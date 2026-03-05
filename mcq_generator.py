@@ -408,11 +408,48 @@ def generate_comprehensive_notes(text, model_provider='openrouter', model_type='
 
         # Estimate tokens and determine if chunking is needed
         total_tokens = estimate_token_count(text)
-        # Use conservative context limit to leave room for prompts and responses
-        max_context_tokens = 60000  # Safe limit for most models
+
+        # Determine model context limits and chunk sizes based on the model
+        # GPT-3.5-turbo: 16K context -> use 8K chunks (leave room for system prompt + response)
+        # GPT-4, GPT-4-turbo, GPT-4o: 128K context -> use 45K chunks
+        # OpenRouter free models: typically 8-32K context -> use 20K chunks
+        # Claude models: 100-200K context -> use 45K chunks
+        if 'gpt-3.5' in model.lower():
+            max_context_tokens = 12000  # GPT-3.5 has 16K limit
+            chunk_size = 8000
+            chunk_overlap = 1000
+            model_context_info = "GPT-3.5 (16K context)"
+        elif 'gpt-4o-mini' in model.lower():
+            max_context_tokens = 100000  # GPT-4o-mini has 128K limit
+            chunk_size = 40000
+            chunk_overlap = 3000
+            model_context_info = "GPT-4o-mini (128K context)"
+        elif 'gpt-4' in model.lower():
+            max_context_tokens = 100000  # GPT-4/4o/4-turbo have 128K limit
+            chunk_size = 45000
+            chunk_overlap = 3000
+            model_context_info = "GPT-4 (128K context)"
+        elif 'claude' in model.lower():
+            max_context_tokens = 150000  # Claude has 100-200K limit
+            chunk_size = 45000
+            chunk_overlap = 3000
+            model_context_info = "Claude (200K context)"
+        elif ':free' in model.lower():
+            # Free OpenRouter models typically have smaller context windows
+            max_context_tokens = 50000
+            chunk_size = 20000
+            chunk_overlap = 2000
+            model_context_info = "Free tier model"
+        else:
+            # Default for other models
+            max_context_tokens = 60000
+            chunk_size = 45000
+            chunk_overlap = 3000
+            model_context_info = "Standard model"
 
         print(f"📝 Generating comprehensive notes with model: {model}")
         print(f"📊 Processing {len(text)} characters ({total_tokens} estimated tokens)...")
+        print(f"🔧 Model config: {model_context_info}, chunk size: {chunk_size}, overlap: {chunk_overlap}")
 
         system_prompt = """You are an expert academic note-maker, government-exam trainer, and documentation analyst.
 Your task is to prepare EXHAUSTIVE, ERROR-FREE, AND COMPLETE NOTES from the given document section.
@@ -461,13 +498,10 @@ These notes will be used for:
         if total_tokens > max_context_tokens:
             print(f"📚 Document too large ({total_tokens} tokens), processing in chunks...")
 
-            # IMPORTANT: Use larger chunks to ensure comprehensive coverage of all rules
-            # 45000 tokens per chunk allows ~15,750 words per chunk (more complete rule coverage)
-            # 3000 token overlap ensures no rules are missed at chunk boundaries
-            # This ensures a 180-rule document is fully processed across all chunks
-            chunks = chunk_text(text, max_tokens=45000, overlap_tokens=3000)
+            # Use dynamic chunk sizes based on model context limits (set above)
+            chunks = chunk_text(text, max_tokens=chunk_size, overlap_tokens=chunk_overlap)
             print(f"📄 Split into {len(chunks)} chunks for comprehensive processing")
-            print(f"📊 Each chunk: ~45,000 tokens with 3,000 token overlap for context continuity")
+            print(f"📊 Each chunk: ~{chunk_size:,} tokens with {chunk_overlap:,} token overlap")
 
             all_notes = []
 
