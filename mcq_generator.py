@@ -410,41 +410,52 @@ def generate_comprehensive_notes(text, model_provider='openrouter', model_type='
         total_tokens = estimate_token_count(text)
 
         # Determine model context limits and chunk sizes based on the model
-        # GPT-3.5-turbo: 16K context -> use 8K chunks (leave room for system prompt + response)
-        # GPT-4, GPT-4-turbo, GPT-4o: 128K context -> use 45K chunks
+        # IMPORTANT: For OpenAI direct API, we need smaller chunks to avoid timeouts
+        # OpenAI API typically takes 30-60 seconds for large outputs, Vercel has 60s limit
+        #
+        # GPT-3.5-turbo: 16K context -> use 6K chunks (fast but limited)
+        # GPT-4o-mini: 128K context -> use 15K chunks (balance speed vs quality)
+        # GPT-4/4o: 128K context -> use 20K chunks (slower but high quality)
         # OpenRouter free models: typically 8-32K context -> use 20K chunks
         # Claude models: 100-200K context -> use 45K chunks
+
         if 'gpt-3.5' in model.lower():
             max_context_tokens = 12000  # GPT-3.5 has 16K limit
-            chunk_size = 8000
-            chunk_overlap = 1000
-            model_context_info = "GPT-3.5 (16K context)"
+            chunk_size = 6000
+            chunk_overlap = 800
+            max_output_tokens = 4000  # Keep output small for speed
+            model_context_info = "GPT-3.5 (16K context, optimized for speed)"
         elif 'gpt-4o-mini' in model.lower():
-            max_context_tokens = 100000  # GPT-4o-mini has 128K limit
-            chunk_size = 40000
-            chunk_overlap = 3000
-            model_context_info = "GPT-4o-mini (128K context)"
+            max_context_tokens = 50000  # Use conservative limit for timeout safety
+            chunk_size = 15000  # Smaller chunks = faster response
+            chunk_overlap = 1500
+            max_output_tokens = 8000  # Moderate output for speed
+            model_context_info = "GPT-4o-mini (128K context, optimized for speed)"
         elif 'gpt-4' in model.lower():
-            max_context_tokens = 100000  # GPT-4/4o/4-turbo have 128K limit
-            chunk_size = 45000
-            chunk_overlap = 3000
+            max_context_tokens = 60000  # Conservative limit for GPT-4
+            chunk_size = 20000  # Moderate chunks
+            chunk_overlap = 2000
+            max_output_tokens = 8000
             model_context_info = "GPT-4 (128K context)"
         elif 'claude' in model.lower():
             max_context_tokens = 150000  # Claude has 100-200K limit
             chunk_size = 45000
             chunk_overlap = 3000
+            max_output_tokens = 16384
             model_context_info = "Claude (200K context)"
         elif ':free' in model.lower():
-            # Free OpenRouter models typically have smaller context windows
+            # Free OpenRouter models - use moderate settings
             max_context_tokens = 50000
             chunk_size = 20000
             chunk_overlap = 2000
+            max_output_tokens = 12000
             model_context_info = "Free tier model"
         else:
             # Default for other models
             max_context_tokens = 60000
-            chunk_size = 45000
-            chunk_overlap = 3000
+            chunk_size = 25000
+            chunk_overlap = 2500
+            max_output_tokens = 12000
             model_context_info = "Standard model"
 
         print(f"📝 Generating comprehensive notes with model: {model}")
@@ -588,19 +599,11 @@ CRITICAL REMINDERS:
 DOCUMENT SECTION TO PROCESS (cover every rule below):
 {chunk}"""
 
-                # Determine max tokens based on model - MAXIMIZED for comprehensive rule coverage
-                # Premium models via OpenRouter (GPT-4o, Claude) support very large outputs
-                # DeepSeek and Gemini also support larger outputs
-                if 'gpt-4' in model.lower() or 'claude' in model.lower():
-                    max_tokens = 16384  # Premium models: Maximum output for comprehensive notes
-                elif 'deepseek' in model.lower() or 'gemini' in model.lower():
-                    max_tokens = 16384  # DeepSeek/Gemini: Large context models
-                elif 'llama-3.3-70b' in model.lower() or 'llama-3.1-405b' in model.lower():
-                    max_tokens = 16000  # Large Llama models: Increased from 12000
-                else:
-                    max_tokens = 12000  # Other models: Increased from 10000 for better coverage
+                # Use the max_output_tokens determined above based on model type
+                # This ensures we stay within timeout limits while maximizing output quality
+                max_tokens = max_output_tokens
 
-                print(f"📤 Processing chunk {chunk_num}/{len(chunks)}...")
+                print(f"📤 Processing chunk {chunk_num}/{len(chunks)} (max_tokens: {max_tokens})...")
 
                 # Add rate limiting delay
                 delay = get_rate_limit_delay(model, chunk_num)
@@ -742,15 +745,9 @@ QUICK REVISION SHEET (at the end):
 DOCUMENT CONTENT TO PROCESS:
 {text}"""
 
-            # Determine max tokens based on model - MAXIMIZED for comprehensive rule coverage
-            if 'gpt-4' in model.lower() or 'claude' in model.lower():
-                max_tokens = 16384  # Premium models: Maximum output
-            elif 'deepseek' in model.lower() or 'gemini' in model.lower():
-                max_tokens = 16384  # DeepSeek/Gemini: Large context models
-            elif 'llama-3.3-70b' in model.lower() or 'llama-3.1-405b' in model.lower():
-                max_tokens = 16000  # Large Llama models
-            else:
-                max_tokens = 12000  # Other models: Increased from 10000
+            # Use the max_output_tokens determined at the start based on model type
+            # This ensures we stay within timeout limits while maximizing output quality
+            max_tokens = max_output_tokens
 
             print(f"🤖 Calling model: {model} with max_tokens: {max_tokens}")
 
