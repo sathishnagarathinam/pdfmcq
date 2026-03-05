@@ -343,7 +343,7 @@
                 <!-- Model Selection for Summarize -->
                 <label for="summarizeModelName">Model:</label>
                 <select id="summarizeModelName" name="summarizeModelName">
-                    <option value="deepseek/deepseek-chat" selected>⭐ DeepSeek V3 - Most Reliable (Recommended)</option>
+                    <!-- Options populated dynamically by updateSummarizeModelOptions() -->
                 </select>
                 <br><br>
 
@@ -419,8 +419,7 @@
                 <!-- Model Selection -->
                 <label for="modelName">Model:</label>
                 <select id="modelName" name="modelName">
-                    <option value="openrouter/cypher-alpha:free" selected>Cypher Alpha (Free)</option>
-                    <option value="openrouter/anthropic/claude-2:free">Claude 2 (Free)</option>
+                    <!-- Options populated dynamically by updateModelOptions() -->
                 </select>
                 <br><br>
 
