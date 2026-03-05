@@ -435,17 +435,17 @@ def generate_comprehensive_notes(text, model_provider='openrouter', model_type='
             max_output_tokens = 4000  # 2:1 ratio for comprehensive coverage
             model_context_info = "GPT-3.5 (16K context, chunked for coverage)"
         elif 'gpt-4o-mini' in model.lower():
-            max_context_tokens = 15000  # Force chunking for documents > 15K tokens
-            chunk_size = 15000  # Each chunk gets full output allocation
-            chunk_overlap = 2000
-            max_output_tokens = 8000  # ~2:1 ratio for comprehensive coverage
-            model_context_info = "GPT-4o-mini (128K context, chunked for coverage)"
+            max_context_tokens = 10000  # Force more chunking
+            chunk_size = 10000  # Smaller chunks for faster response
+            chunk_overlap = 1200
+            max_output_tokens = 5000  # Faster completion
+            model_context_info = "GPT-4o-mini (chunked for speed)"
         elif 'gpt-4' in model.lower():
-            max_context_tokens = 12000  # Force more chunking to avoid timeout
-            chunk_size = 12000  # Smaller chunks = faster response
-            chunk_overlap = 1500
-            max_output_tokens = 6000  # 2:1 ratio, faster completion
-            model_context_info = "GPT-4 (128K context, optimized for speed)"
+            max_context_tokens = 8000  # Aggressive chunking to avoid timeout
+            chunk_size = 8000  # Small chunks = fast response
+            chunk_overlap = 1000
+            max_output_tokens = 4000  # Fast completion within 55s
+            model_context_info = "GPT-4 (chunked for speed, no timeout)"
         elif 'claude' in model.lower():
             max_context_tokens = 40000  # Claude can handle more
             chunk_size = 40000
@@ -533,25 +533,7 @@ Then process EVERY SINGLE RULE in this section completely - do NOT skip any rule
                     chunk_instruction = f"""This is the FINAL PART ({chunk_num} of {len(chunks)}) of the document.
 
 Process EVERY REMAINING RULE completely - do NOT skip any rule.
-
-AFTER processing all rules, ADD THESE STUDY TOOLS AT THE END:
-
-1. MASTER COMPARISON TABLE - Compare ALL major rules:
-| Rule No | Subject | Authority | Time Limit | Key Condition |
-|---------|---------|-----------|------------|---------------|
-
-2. COMPREHENSIVE SUMMARY TABLE:
-| Chapter | Key Rules | Important Points | Exam Focus |
-|---------|-----------|------------------|------------|
-
-3. FLOWCHARTS for major processes (use -> arrow format):
-FLOWCHART - [Process Name]:
-Step 1 -> Step 2 -> Step 3 -> Step 4
-
-4. QUICK REVISION SHEET - One page summary of key points
-5. EXAM FOCUS AREAS - Most important rules for exams
-6. COMMON MISTAKES TO AVOID
-7. MCQ-PRONE AREAS"""
+Focus on comprehensive rule coverage only - study tools will be generated separately."""
 
                 else:
                     chunk_instruction = f"""This is PART {chunk_num} of {len(chunks)} of the document.
@@ -657,11 +639,90 @@ DOCUMENT SECTION TO PROCESS (cover every rule below):
             import re
             combined_notes = re.sub(r'\n{4,}', '\n\n\n', combined_notes)
 
+            # ================================================================
+            # GENERATE STUDY TOOLS COVERING THE ENTIRE DOCUMENT
+            # ================================================================
+            print(f"📚 Generating comprehensive study tools for entire document...")
+
+            # Create a condensed summary of all notes for study tools generation
+            # Extract key rules and topics from the combined notes
+            notes_summary = combined_notes[:30000] if len(combined_notes) > 30000 else combined_notes
+
+            study_tools_prompt = f"""Based on the following comprehensive notes from a {len(chunks)}-part document,
+create STUDY TOOLS that cover the ENTIRE document content.
+
+IMPORTANT: These study tools must summarize ALL content from ALL sections of the document, not just one part.
+
+CREATE THE FOLLOWING STUDY TOOLS:
+
+1. MASTER COMPARISON TABLE - Compare ALL major rules from the entire document:
+| Rule No | Subject | Authority | Time Limit | Key Condition |
+|---------|---------|-----------|------------|---------------|
+(Include at least 15-20 key rules from across all sections)
+
+2. COMPREHENSIVE SUMMARY TABLE - Summarize ALL chapters/sections:
+| Chapter/Section | Key Rules | Important Points | Exam Focus |
+|-----------------|-----------|------------------|------------|
+(Cover every major section of the document)
+
+3. FLOWCHARTS for ALL major processes (use -> arrow format):
+FLOWCHART - [Process Name]:
+Step 1 -> Step 2 -> Step 3 -> Step 4
+
+(Include at least 3-5 flowcharts for key processes like Application, Approval, Appeal, etc.)
+
+4. QUICK REVISION SHEET
+- One-page summary of ALL key points from the entire document
+- Must cover rules from ALL sections
+
+5. EXAM FOCUS AREAS
+- List the most important rules for exams from ALL sections
+- Include rule numbers and brief descriptions
+
+6. COMMON MISTAKES TO AVOID
+- Common confusions between similar rules
+- Frequently misunderstood provisions
+
+7. MCQ-PRONE AREAS
+- Topics likely to appear in MCQs
+- Tricky distinctions to remember
+
+---
+DOCUMENT NOTES TO ANALYZE:
+{notes_summary}"""
+
+            try:
+                print(f"🤖 Calling model for study tools generation...")
+                study_completion = client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": "You are an expert exam preparation specialist. Create comprehensive study tools that cover ALL content from the entire document provided."},
+                        {"role": "user", "content": study_tools_prompt}
+                    ],
+                    max_tokens=max_output_tokens,
+                    temperature=0.3,
+                )
+                study_tools = study_completion.choices[0].message.content.strip()
+                print(f"✅ Study tools generated: {len(study_tools)} characters")
+
+                # Append study tools to the combined notes
+                combined_notes += "\n\n" + "="*60 + "\n"
+                combined_notes += "STUDY TOOLS - COVERING ENTIRE DOCUMENT\n"
+                combined_notes += "="*60 + "\n\n"
+                combined_notes += study_tools
+
+            except Exception as study_error:
+                print(f"⚠️  Error generating study tools: {study_error}")
+                # Add a placeholder if study tools generation fails
+                combined_notes += "\n\n" + "="*60 + "\n"
+                combined_notes += "[Note: Study tools could not be generated - please review the notes above]\n"
+                combined_notes += "="*60 + "\n"
+
             # Log final output statistics
             total_chars = len(combined_notes)
             estimated_words = total_chars // 5
-            print(f"✅ Generated {total_chars:,} characters (~{estimated_words:,} words) of comprehensive notes from {len(chunks)} chunks")
-            print(f"📝 All {len(chunks)} document sections processed - all content should be included")
+            print(f"✅ Generated {total_chars:,} characters (~{estimated_words:,} words) of comprehensive notes from {len(chunks)} chunks + study tools")
+            print(f"📝 All {len(chunks)} document sections processed with comprehensive study tools")
             return combined_notes
 
         else:
