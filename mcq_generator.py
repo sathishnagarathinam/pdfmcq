@@ -245,29 +245,19 @@ def get_model_token_limits(provider, model_name):
         'meta-llama/llama-3.2-3b-instruct:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Llama 3.2 3B - Fast
         'meta-llama/llama-3.1-8b-instruct:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Llama 3.1 8B - Efficient
 
-        # Arcee AI Models (Free Tier - Verified Feb 2026)
-        'arcee-ai/trinity-large-preview:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Trinity Large 400B MoE (13B active) - Frontier
-        'arcee-ai/trinity-mini:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Trinity Mini 26B (3B active) - Efficient Reasoning
-
-        # NVIDIA Nemotron Models (Free Tier - Verified Feb 2026)
-        'nvidia/nemotron-3-nano-30b-a3b:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Nemotron 3 Nano 30B MoE - Newest
-        'nvidia/nemotron-nano-9b-v2:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Nemotron Nano 9B V2 - Reasoning
-        'nvidia/nemotron-nano-12b-v2-vl:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Nemotron Nano 12B VL - Multimodal
-
-        # Meta Llama Models (Most Stable)
-        'meta-llama/llama-3.3-70b-instruct:free': {'tokens': 8000, 'rate_limit': '20/min'},
-        'meta-llama/llama-3.2-3b-instruct:free': {'tokens': 8000, 'rate_limit': '20/min'},
-        'meta-llama/llama-3.1-8b-instruct:free': {'tokens': 8000, 'rate_limit': '20/min'},
+        # Arcee AI Models (Free Tier - Verified March 2026)
+        'arcee-ai/trinity-large-preview:free': {'tokens': 8000, 'rate_limit': '10/min'},  # Trinity Large 400B MoE (13B active) - 131K context - Frontier
 
         # Qwen Models
         'qwen/qwen-2.5-72b-instruct:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Qwen 2.5 72B
-        'qwen/qwen-2.5-coder-32b-instruct:free': {'tokens': 8000, 'rate_limit': '8/min'},  # Qwen 2.5 Coder
 
-        # Google Gemma (Stable)
-        'google/gemma-2-9b-it:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Gemma 2 9B
+        # Google Models
+        'google/gemini-2.0-flash-exp:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Gemini 2.0 Flash - 1M context
+        'google/gemma-3-27b-it:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Gemma 3 27B - Multimodal
 
-        # Microsoft Phi
-        'microsoft/phi-3-medium-128k-instruct:free': {'tokens': 16000, 'rate_limit': '20/min'},
+        # Mistral Models
+        'mistralai/mistral-small-3.1-24b-instruct:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Mistral Small 3.1 - 128K context
+        'mistralai/mistral-7b-instruct:free': {'tokens': 8000, 'rate_limit': '20/min'},  # Mistral 7B - Fast
         'microsoft/phi-3-mini-128k-instruct:free': {'tokens': 16000, 'rate_limit': '20/min'},
 
         # Mistral (Stable)
